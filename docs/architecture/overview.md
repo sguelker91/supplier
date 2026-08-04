@@ -63,6 +63,21 @@ dokumentierte Voraussetzung, nicht als getroffene Entscheidung.
   gehalten. Datenresidenz/AVV sind vor Produktivbetrieb zwingend zu klären
   (siehe ADR 0004, Datenklassifizierung).
 
+## Zukünftige Anforderungen (noch nicht im Scope)
+
+- **Gastbenutzer je Lieferant**: Lieferanten sollen künftig eigene
+  "Gastbenutzer" anlegen können, z. B. für Steuerberater, Speditionen oder
+  eigene Mitarbeiter, die im Auftrag des Lieferanten auf das Extranet
+  zugreifen. Noch nicht als Backlog-Story ausgearbeitet — hier nur als
+  Anforderung vorgemerkt, damit sie bei künftigen Architekturentscheidungen
+  mitgedacht wird. Direkter Bezug zu [ADR 0004](adr/0004-zitadel-oidc-authentifizierung.md):
+  Das dort gewählte Modell "eine ZITADEL Organization pro Lieferant"
+  unterstützt grundsätzlich mehrere Nutzer je Organization, was für
+  Gastbenutzer mit eingeschränkten Rollen/Rechten passend erscheint — die
+  konkrete Rollen-/Rechte-Ausgestaltung (z. B. welche Belege/Kontrakte ein
+  Gastbenutzer sehen darf) ist jedoch nicht entschieden und erfordert eine
+  eigene Story/ADR, sobald sie priorisiert wird.
+
 ## Offene technische Entscheidungen
 
 - Konkrete Monorepo-Tooling-Wahl innerhalb des mit
