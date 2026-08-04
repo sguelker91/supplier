@@ -229,3 +229,93 @@ sondern hält als harte, vor Produktivbetrieb zu klärende Voraussetzung fest:
 - Diese ADR selbst führt keine neuen fachlichen Entitäten ein, sondern
   etabliert den technischen Verifikationsmechanismus für bereits
   klassifizierte, mandantengebundene Entitäten.
+
+## Implementierungsnotizen
+
+Analog zum bestehenden Kontrakte-Konturwurf (siehe
+`docs/backlog/lieferant-kontrakte-einsehen.md`) wurde diese ADR als
+framework-unabhängiger TypeScript-Konturwurf umgesetzt, **kein**
+lauffähiges Backend/Frontend. Es existiert weiterhin kein `package.json`
+und keine echten Dependencies (ADR 0003 ist dazu weiterhin offen).
+
+**Gebaut:**
+- `apps/api/src/auth/zitadel-token.types.ts` — `RawZitadelTokenPayload`
+  (unverifizierte JWT-Claims wie von ZITADEL erwartet, inkl. zweier
+  plausibler Platzhalter-Claim-Namen für die Organization-Zugehörigkeit)
+  und `VerifiedTokenClaims` (normalisierte Claims nach Signaturprüfung,
+  vor Policy-Prüfung).
+- `apps/api/src/auth/token-verifier.interface.ts` — `TokenVerifier`-
+  Interface (`verify(rawToken): Promise<VerifiedTokenClaims>`) als reiner
+  Vertrag für die JWKS-Signaturprüfung, plus `TokenVerificationError` als
+  definierter Fehlerfall (kein stiller Fallback). Ausdrücklich als
+  Platzhalter markiert: eine echte Implementierung würde `jose` oder
+  `jwks-rsa` gegen den ZITADEL-JWKS-Endpoint nutzen, sobald ein
+  Paketmanager/Dependency-Setup entschieden ist.
+- `apps/api/src/auth/auth-guard.service.ts` — `AuthGuardService.authenticate()`
+  extrahiert den Bearer-Token, ruft `TokenVerifier.verify()` auf und prüft
+  danach separat Ablaufzeit, Issuer und Audience (Platzhalter-Prüfung
+  gegen `AuthGuardConfig`). Baut daraus `AuthenticatedSupplierContext`
+  (`../contracts/contract.types.ts`) via Mapping `organizationId ->
+  supplierId`. Jeder Fehlerfall (fehlendes Token, ungültige/abgelaufene
+  Signatur, Issuer-/Audience-Mismatch, fehlender Organization-Claim) wirft
+  eine definierte `AuthenticationError` — es gibt keinen Pfad, der
+  `AuthenticatedSupplierContext` ohne erfolgreiche Verifikation liefert.
+- `apps/api/src/contracts/contracts.controller.ts` (neu) — zeigt, wie
+  `ContractsService` (unverändert aus dem bestehenden Prototyp) jetzt
+  hinter `AuthGuardService` hängen würde, inkl. Kommentar-Skizze des
+  künftigen echten `@Controller()`/`@UseGuards()`-NestJS-Codes. Bildet das
+  403/404/401-Statuscode-Mapping aus ADR 0002 Punkt 4 sowie den neuen
+  401-Fall bei fehlgeschlagener Authentifizierung ab.
+- `apps/web/src/auth/oidc-config.types.ts` und `auth-client.ts` sowie
+  `apps/mobile/src/auth/oidc-config.types.ts` und `auth-client.ts` —
+  jeweils ein `OidcClientConfig`-Typ (issuer, clientId, redirectUri,
+  scopes) und eine `withAuthHeader()`-Funktion, die zeigt, wie ein
+  Access-Token nach Login als `Authorization: Bearer`-Header an
+  `apps/api`-Requests angehängt würde. `loginWithZitadel()` ist bewusst
+  nur als `declare function` (Signatur ohne Implementierung) skizziert,
+  um zu markieren, dass kein echtes OIDC-SDK eingebunden ist. Mobile
+  enthält zusätzlich Kommentare zu `expo-auth-session` als künftig
+  naheliegende Bibliothek sowie zu sicherer Token-Ablage
+  (`expo-secure-store`) — beides nicht real integriert.
+
+**Bewusst als Platzhalter/offen belassen (keine stillschweigende
+Festlegung):**
+- Keine echte JWKS-Bibliothek (`jose`/`jwks-rsa`) eingebunden — reine
+  Interface-Skizze in `token-verifier.interface.ts`.
+- Kein echtes OIDC-Client-SDK in `apps/web`/`apps/mobile` — `auth-client.ts`
+  bildet nur die Ziel-Schnittstelle (Session-Typ, Bearer-Header-Anhängung)
+  ab, keinen echten PKCE-Ablauf.
+- Kein Framework (NestJS/React/Expo) — alle Dateien sind reine
+  TypeScript-Interfaces/-Klassen ohne Decorators, Routing oder Build.
+- Das konkrete Mapping ZITADEL-Organization-ID → interne `supplierId`
+  bleibt laut ADR 0004 Punkt 3 offen; `AuthGuardService` implementiert im
+  Konturwurf vereinfachend eine 1:1-Identität
+  (`supplierId === organizationId`) und markiert das explizit im
+  Code-Kommentar als Annahme des Konturwurfs, nicht als Festlegung dieser
+  ADR-Frage. Ein separates Mapping-Feld in einer künftigen
+  `Supplier`-Entität würde stattdessen einen Lookup an dieser Stelle
+  erfordern.
+- Der exakte ZITADEL-Claim-Name für die Organization-Zugehörigkeit ist in
+  `zitadel-token.types.ts` als Platzhalter mit zwei plausiblen Varianten
+  benannt — muss beim realen ZITADEL-Projekt-Setup verifiziert werden.
+- Reale ZITADEL-Projekt-/Applikationskonfiguration, Stand heute:
+  - Instanz/Issuer: `https://supplier-janwkz.eu1.zitadel.cloud` (Region
+    `eu1` — deckt den EU-Datenresidenz-Teil der harten Voraussetzung aus
+    Entscheidungspunkt 4 ab; der separat nötige Auftragsverarbeitungsvertrag
+    (AVV/DPA) mit ZITADEL ist davon unberührt weiterhin ungeklärt).
+  - ZITADEL-Projekt-ID: `384797730033190919`.
+  - Applikation "Web" (`apps/web`): App-ID `384798128626223111`,
+    OIDC-Client-ID `384798128626288647`. Beides sind bei ZITADEL
+    öffentliche, nicht-geheime Kennungen (Public Client mit PKCE, siehe
+    Entscheidungspunkt 1 — kein Client-Secret nötig/vorhanden).
+  - Applikation für `apps/mobile` (Native-App) sowie Redirect-URIs,
+    Scopes/Claims-Konfiguration und die Organization-Provisionierung für
+    Lieferanten sind weiterhin nicht eingerichtet/dokumentiert — bleiben
+    laut ADR 0004 "Offene Annahmen" offen.
+  - Diese Werte sind reine Konfiguration, keine ADR-Entscheidung, und
+    gehören perspektivisch in eine Umgebungskonfiguration (z. B.
+    `.env`/Secrets-Management), sobald ein Framework/Dependency-Setup
+    existiert (siehe ADR 0003) — hier nur dokumentiert, damit sie nicht
+    verloren gehen.
+- Token-Lebensdauer und Refresh-Strategie bleiben unverändert offen (siehe
+  ADR-Konsequenzen).
