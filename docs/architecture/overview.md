@@ -27,6 +27,21 @@ Dateipfade innerhalb eines Repos angewiesen ist. Die konkrete
 Monorepo-*Tooling*-Wahl (Turborepo/Nx/Workspaces) bleibt davon unabhängig
 offen.
 
+Der von Security als kritisch bemängelte Fehlbestand — kein tatsächlicher
+Authentifizierungsmechanismus, `AuthenticatedSupplierContext` ohne
+Herkunftsgarantie — ist nun größtenteils adressiert:
+[ADR 0004](adr/0004-zitadel-oidc-authentifizierung.md) legt **ZITADEL Cloud**
+als OIDC-Provider für den Lieferanten-Login fest, entscheidet ein
+**tokenbasiertes Modell** (kein Session-Store in `apps/api`; JWT-Verifikation
+gegen den ZITADEL-JWKS-Endpoint durch einen Guard, der daraus den
+`AuthenticatedSupplierContext` aus ADR 0002 aufbaut) und legt **eine ZITADEL
+Organization pro Lieferant** als Mandantenmodell fest, das die
+Mandantentrennung aus ADR 0002 zusätzlich auf IdP-Ebene absichert (ohne die
+dort entschiedene Guard-/Repository-Filterung zu ersetzen). Offen bleibt vor
+Produktivbetrieb zwingend die Klärung von Datenresidenz (EU-Region bei
+ZITADEL Cloud) und ein Auftragsverarbeitungsvertrag — als harte, in der ADR
+dokumentierte Voraussetzung, nicht als getroffene Entscheidung.
+
 ## Bekannte Systemgrenzen
 
 - **ERP-System**: führendes System für Stammdaten, Kontrakte, Belege.
@@ -40,6 +55,13 @@ offen.
   Grenze überqueren müssen. Das konkrete Transportmuster (z. B.
   REST-Wrapper, Datei-Export/Import, Webhooks) ist weiterhin offen und
   muss vor Umsetzung eines Ingestion-Adapters geklärt werden.
+- **ZITADEL Cloud**: externer OIDC-Identity-Provider für die
+  Lieferanten-Authentifizierung ([ADR 0004](adr/0004-zitadel-oidc-authentifizierung.md)).
+  `apps/api` überquert diese Grenze ausschließlich lesend zur
+  JWT-Signaturprüfung (JWKS-Endpoint); Lieferanten-Identitätsdaten
+  (Nutzer-Stammdaten, Organisationszugehörigkeit) werden bei ZITADEL Cloud
+  gehalten. Datenresidenz/AVV sind vor Produktivbetrieb zwingend zu klären
+  (siehe ADR 0004, Datenklassifizierung).
 
 ## Offene technische Entscheidungen
 
@@ -49,11 +71,19 @@ offen.
   Monorepo-vs.-Polyrepo-Frage selbst ist nicht mehr offen.
 - Test-Framework(s) für Web/Mobile/API
 - CI-Provider
-- Konkreter Authentifizierungsmechanismus für Lieferanten (Login-Flow,
-  Token- vs. Session-Modell, IdP-Wahl, Token-Lebensdauer). Der
-  Autorisierungs-/Mandantentrennungs-**Teil** (wie ein bereits
-  authentifizierter Lieferant serverseitig auf eigene Ressourcen
-  beschränkt wird) ist für lieferantenscoped Ressourcen bereits in
-  [ADR 0002](adr/0002-mandantentrennung-kontrakte.md) entschieden.
+- Feindetails des Authentifizierungsmechanismus für Lieferanten: IdP-Wahl
+  (ZITADEL Cloud), Grundmodell (tokenbasiert, JWT-Verifikation gegen JWKS)
+  und Mandantenmodell (eine ZITADEL Organization pro Lieferant) sind mit
+  [ADR 0004](adr/0004-zitadel-oidc-authentifizierung.md) entschieden. Weiterhin
+  offen: konkrete Token-Lebensdauer und Refresh-Strategie (inkl.
+  Web- vs. Mobile-spezifischer Unterschiede), exakte
+  ZITADEL-Projekt-/Applikationskonfiguration (Redirect-URIs,
+  Scopes/Claims), das Mapping ZITADEL-Organization-ID ↔ interne
+  `supplierId` sowie der Lieferanten-Onboarding-Prozess in ZITADEL, und
+  die vor Produktivbetrieb zwingende Klärung von Datenresidenz/AVV mit
+  ZITADEL. Der Autorisierungs-/Mandantentrennungs-**Teil** (wie ein
+  bereits authentifizierter Lieferant serverseitig auf eigene Ressourcen
+  beschränkt wird) bleibt unverändert in [ADR 0002](adr/0002-mandantentrennung-kontrakte.md)
+  entschieden.
 - Konkreter Transportmechanismus Lobster → `apps/api` für den
   Kontrakt-Ingestion-Adapter (siehe ADR 0001, offene Annahme).
