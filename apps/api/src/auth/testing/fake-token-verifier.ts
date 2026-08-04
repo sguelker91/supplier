@@ -18,6 +18,7 @@ import { generateKeyPair, jwtVerify, SignJWT } from 'jose';
 import type { KeyLike } from 'jose';
 
 import { TokenVerificationError, type TokenVerifier } from '../token-verifier.interface';
+import { parseSupplierUserType } from '../user-type';
 import type { RawZitadelTokenPayload, VerifiedTokenClaims } from '../zitadel-token.types';
 
 export class FakeTokenVerifier implements TokenVerifier {
@@ -51,6 +52,7 @@ export class FakeTokenVerifier implements TokenVerifier {
       );
     }
 
+    // ADR 0008: dieser Organization-Claim trägt fachlich die GPA.
     const organizationId =
       payload.org_id ?? payload['urn:zitadel:iam:user:resourceowner:id'] ?? null;
 
@@ -62,6 +64,7 @@ export class FakeTokenVerifier implements TokenVerifier {
       issuedAt: payload.iat,
       email: payload.email,
       organizationId,
+      userType: parseSupplierUserType(payload.user_type),
     };
   }
 }

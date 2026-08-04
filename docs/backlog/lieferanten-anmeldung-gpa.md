@@ -199,3 +199,158 @@ selbst registrieren muss.
 - Ist ein AVV/DPA mit Okta (analog zur bereits für ZITADEL Cloud in
   ADR 0004 geforderten Klärung von Datenresidenz/AVV) erforderlich und vor
   Produktivbetrieb geklärt?
+
+## Implementierungsnotizen
+
+Umgesetzt gemäß [ADR 0008](../architecture/adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md),
+aufbauend auf dem bereits als echtes NestJS-/React-/Expo-Monorepo
+bestehenden Grundgerüst aus ADR 0004/PR #4. Fokus: `apps/api` (verbindlich)
+und `apps/web` (Login-Einstiegspunkt), `apps/mobile` bewusst nicht
+erweitert (Begründung siehe unten).
+
+**`apps/api` — GPA als `supplierId`, `userType`-Claim (ADR 0008 Punkt 1/2):**
+
+- `apps/api/src/auth/user-type.ts` (neu): `SupplierUserType`-Enum
+  (`SUPPLIER`, `GUEST`, `FREIGHT_FORWARDER`, `TAX_ADVISOR` — exakte
+  Bezeichner sind laut ADR 0008 Umsetzungsdetail) sowie
+  `parseSupplierUserType()`, das einen rohen Claim-Wert tolerant auf einen
+  bekannten Typ abbildet oder `null` liefert (unbekannter/fehlender Wert
+  ist laut ADR 0008 explizit **kein** Fehlerfall, anders als eine fehlende
+  GPA).
+- `apps/api/src/auth/zitadel-token.types.ts`: `RawZitadelTokenPayload` um
+  Platzhalter-Claim `user_type?: string` ergänzt; Kommentare zu
+  `org_id`/`urn:zitadel:iam:user:resourceowner:id` präzisiert, dass dieser
+  Claim seit ADR 0008 fachlich die GPA trägt. `VerifiedTokenClaims` um
+  `userType: SupplierUserType | null` ergänzt.
+- `apps/api/src/auth/jose-token-verifier.ts` und
+  `apps/api/src/auth/testing/fake-token-verifier.ts`: extrahieren
+  `userType` zusätzlich zur Organization-ID (identische Logik in beiden,
+  konsistent mit dem bereits bestehenden Duplizierungsmuster zwischen
+  echter und Test-Implementierung).
+- `apps/api/src/contracts/contract.types.ts`:
+  `AuthenticatedSupplierContext` um optionales Feld `userType?:
+  SupplierUserType` erweitert; Kommentar zu `supplierId` präzisiert von
+  "1:1-Kurzschluss mit `organizationId` als Konturwurf-Annahme" (ADR 0004)
+  zu der jetzt verbindlichen fachlichen Aussage `supplierId === GPA`
+  (ADR 0008 Entscheidung Punkt 1). Datei liegt bewusst weiterhin unter
+  `contracts/` statt in einem eigenen `auth/`-Ort, um nicht mehr Dateien
+  als nötig zu verschieben — das ist bestehende Struktur aus ADR
+  0004/PR #4, keine neue Festlegung dieser Story; eine künftige
+  Aufräum-ADR könnte diesen Typ nach `auth/` verschieben.
+- `apps/api/src/auth/auth-guard.service.ts`: `toSupplierContext()`
+  umbenannt/kommentiert auf das GPA-Modell (Fehlermeldung bei fehlendem
+  Organization-Claim spricht jetzt explizit von "GPA-tragendem
+  Organization-Claim"); extrahiert zusätzlich `userType` und übernimmt ihn
+  unverändert (`claims.userType ?? undefined`) in den Kontext. **Keine**
+  Autorisierungslogik wertet `userType` aus — Guard/Repository-Filter
+  bleiben ausschließlich nach `supplierId` (GPA) scopend, wie von ADR 0008
+  explizit gefordert.
+- Bewusst **nicht** umbenannt: das Feld `organizationId` in
+  `VerifiedTokenClaims` sowie der Fehlerreason `missing_organization_claim`
+  bleiben technisch benannt (sie beschreiben weiterhin den ZITADEL-
+  Organization-Claim-Mechanismus selbst) — nur die Dokumentation/Kommentare
+  wurden um die fachliche GPA-Bedeutung ergänzt, wie in der Aufgabenstellung
+  gefordert ("Benennung/Kommentare müssen das GPA-Konzept widerspiegeln",
+  nicht zwingend jede Variable umbenennen).
+
+**Tests (`apps/api`):**
+
+- `apps/api/src/auth/auth-guard.service.spec.ts`: neue Tests für
+  `userType`-Extraktion bei bekanntem Wert, `userType === undefined` bei
+  unbekanntem/fehlendem Claim (kein Fehlerfall), sowie einen Test für AC4
+  (zwei unterschiedliche `userType`-Anmeldungen derselben GPA erhalten
+  identische `supplierId`, unterschiedlichen `userType`, keine
+  Vermischung). Bestehender Test für fehlenden Organization-Claim
+  umbenannt/kommentiert auf GPA-Sprache, Verhalten unverändert.
+- `apps/api/test/contracts.e2e-spec.ts`: `tokenFor()`-Helper um optionalen
+  `userType`-Parameter erweitert; neuer Test deckt AC4 auf HTTP-Ebene ab
+  (Lieferant- und Steuerberater-Anmeldung derselben synthetischen GPA
+  sehen identische, korrekt gescopte Kontraktmenge). Der bereits
+  bestehende Mandantentrennungstest (Lieferant A kann Kontrakt von
+  Lieferant B nicht lesen, AC von `lieferant-kontrakte-einsehen`) bleibt
+  inhaltlich unverändert gültig — er nutzt weiterhin `org_id` als
+  Token-Claim, der jetzt lediglich fachlich als GPA zu verstehen ist,
+  keine Code-Änderung an der Erwartung selbst nötig.
+
+**`apps/web` — Login-Einstiegspunkt:**
+
+- `apps/web/src/auth/auth-client.ts`: `loginWithZitadel()` von einer reinen
+  `declare function` (kein Laufzeitcode) zu einer echten, aber bewusst
+  fehlschlagenden `async function` geändert, die einen klar beschrifteten
+  Fehler wirft ("es fehlt weiterhin eine echte OIDC-Client-SDK-Integration
+  mit PKCE"). **Abweichung von der ADR-0004-Implementierungsnotiz**, die
+  explizit `declare function` vorsah, um zu markieren, dass kein SDK
+  existiert: Diese Story benötigt einen tatsächlich aufrufbaren,
+  testbaren Login-Einstiegspunkt (`LoginPage`); ein `declare function`
+  hätte beim Klick zur Laufzeit einen undurchsichtigen
+  `TypeError: loginWithZitadel is not a function` erzeugt (da `declare
+  function` keinen JS-Code emittiert). Die neue Implementierung ist
+  weiterhin **keine funktionierende PKCE-/Krypto-Implementierung** —
+  ausschließlich ein ehrlicher, sofort fehlschlagender Platzhalter, der
+  im UI sichtbar einen Fehler anzeigt statt einen stillen/falschen Erfolg
+  vorzutäuschen. Sobald ein echtes OIDC-SDK (siehe ADR 0004
+  "Konsequenzen", Bibliothekswahl offen) integriert wird, ersetzt dessen
+  echte Implementierung diesen Funktionskörper 1:1 (Signatur bleibt
+  gleich).
+- `apps/web/src/auth/LoginPage.tsx` (neu) und `LoginPage.spec.tsx` (neu):
+  echte, renderbare React-Komponente analog zur bereits bestehenden
+  `ContractsListPage` (Bootstrap-Konvention: Presentational-Komponente,
+  die ihre Konfiguration als Prop erhält, kein eigenes
+  Env-/Routing-Wiring). Zeigt eine "Anmelden"-Aktion, die
+  `loginWithZitadel(config)` auslöst und einen etwaigen Fehler sichtbar
+  macht (`role="alert"`); bewusst **kein** Registrierungs-/Sign-up-Link
+  oder -Hinweis (AC6) — durch Test abgesichert
+  (`queryByText(/registrieren/i)` etc.). **Nicht** Teil dieser Komponente:
+  Routing/Redirect-Verhalten für AC7 (`apps/web` hat weiterhin keine
+  Routing-Entscheidung, siehe `App.tsx`), Session-/Token-Ablage nach
+  IdP-Rückkehr, Darstellung des Okta-MFA-Schritts selbst (läuft laut
+  ADR 0008 Punkt 4 vollständig auf ZITADEL-/Okta-Seite). `LoginPage` ist
+  daher **nicht** in `App.tsx` verdrahtet (dort wird weiterhin nur
+  `ContractsListPage` mit Demo-Daten gerendert) — eine echte Verdrahtung
+  setzt die in ADR 0004 als offen markierte Routing-/State-Entscheidung
+  voraus und würde sonst eine Architekturfrage im Alleingang beantworten.
+
+**`apps/mobile` — bewusst nicht erweitert:**
+
+- `apps/mobile/src/auth/*` bleibt unverändert (weiterhin `declare
+  function loginWithZitadel`, kein Login-Screen). Grund: Laut
+  Aufgabenstellung soll bei fehlendem sinnvollen Scope für eine
+  vollständige Mobile-Umsetzung dokumentiert statt unfertiger/nicht
+  kompilierender Code hinterlassen werden. Eine `LoginScreen`-Komponente
+  hätte entweder (a) dieselbe `declare function`-Falle wie ursprünglich in
+  `apps/web` reproduziert (nicht aufrufbar) oder (b) eine Änderung an
+  `apps/mobile/src/auth/auth-client.ts` erfordert, die über den in der
+  Aufgabenstellung explizit auf `apps/web` beschränkten UI-Auftrag
+  hinausgeht. Fehlend für Mobile (Stand dieser Story): echter Login-Screen,
+  `expo-auth-session`-Integration, sichere Token-Ablage
+  (`expo-secure-store`) — alles bereits in ADR 0004 als offen dokumentiert
+  und durch diese Story nicht aufgelöst.
+
+**Kein Self-Signup (AC6):** Repository-weite Prüfung (`grep` über
+`apps/web`, `apps/mobile`, `apps/api`) ergab **keine** bestehende
+Registrierungs-/Sign-up-UI oder -Endpunkt — es gab nichts zu entfernen.
+Dokumentiert hier, um einen "erfundenen Fehlen-Test" zu vermeiden, wie in
+der Aufgabenstellung gefordert.
+
+**Nicht umgesetzt / bewusst außerhalb des Scopes** (konsistent mit ADR
+0008 "Explizit offen gelassen" und den Nicht-Zielen der Story):
+
+- Kein echtes Okta-/ZITADEL-Identity-Brokering-Setup (reine
+  Konfigurationsaufgabe außerhalb von `apps/*`, siehe ADR 0008 Punkt 4).
+- Keine Berechtigungs-/Sichtbarkeitsunterscheidung nach `userType` — wie
+  von ADR 0008 explizit gefordert, hat `userType` in diesem Code
+  ausschließlich Transport-, keine Autorisierungswirkung.
+- Kein Logout-Flow (AC9) — analog zu ADR 0004 war Session-/
+  Token-Lebenszyklus-Management nie Teil des bisherigen Konturwurfs und
+  wird hier nicht im Alleingang nachgeholt, da das eine über diese Story
+  hinausgehende Session-Architekturfrage berührt (Token-Invalidierung,
+  ZITADEL End-Session-Endpoint), die ADR 0004/0008 nicht spezifizieren.
+- Kein Mapping/Reconciliation zwischen alter ERP-Kennung
+  (`supplierExternalId`, ADR 0001) und GPA an der Lobster-Kontrakt-Grenze
+  — von ADR 0008 selbst als offenes Risiko benannt, nicht Teil dieser
+  Implementierung.
+
+**Verifikation:** `npm run typecheck --workspaces` und `npm test
+--workspaces` laufen grün (API: 23 Tests / 3 Suites, Web: 7 Tests /
+2 Suites, Mobile: 1 Test / 1 Suite, unverändert gegenüber vorher plus die
+oben beschriebenen neuen Fälle).

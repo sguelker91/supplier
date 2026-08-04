@@ -4,6 +4,19 @@
  * ADR 0006 Punkt 2 als Merge-Gate für die Mandantentrennung gefordert:
  * "Lieferant A ruft Kontrakt von Lieferant B ab -> 403".
  *
+ * Seit ADR 0008 ("GPA als Mandanten-Schlüssel, Mehrfachanmeldungen pro
+ * GPA und Okta als föderierter MFA-Provider",
+ * docs/architecture/adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)
+ * gilt: Der `org_id`-Claim, den die Tokens in diesem Test tragen,
+ * referenziert fachlich die Geschäftspartnernummer (GPA) -- die
+ * Bezeichner `supplier-synthetic-a`/`-b` bleiben als synthetische
+ * Test-GPA bestehen, nur die fachliche Bedeutung des Claims hat sich
+ * präzisiert (`supplierId === GPA`, nicht mehr die alte ERP-eigene
+ * Kennung). Zusätzlich deckt dieser Test AC4 der Story
+ * `lieferanten-anmeldung-gpa` ab: mehrere unterschiedliche Anmeldungen
+ * (userType) derselben GPA werden konsistent auf dieselbe GPA gescoped,
+ * ohne Vermischung mit anderen GPA.
+ *
  * Läuft gemäß ADR 0006 Punkt 3 NIEMALS gegen die echte ZITADEL-Cloud-
  * Instanz: `TOKEN_VERIFIER` wird per `overrideProvider` durch
  * `FakeTokenVerifier` ersetzt (selbst-signierte Test-Tokens, kein
@@ -50,13 +63,20 @@ describe('Contracts HTTP-Layer — Mandantentrennungs-Gate (ADR 0002/0005/0006)'
     await app.close();
   });
 
-  async function tokenFor(organizationId: string): Promise<string> {
+  /**
+   * `organizationId` referenziert seit ADR 0008 fachlich die GPA. `userType`
+   * ist optional und bildet ADR 0008 Entscheidung Punkt 2 ab (Lieferant,
+   * Gastbenutzer, Spedition, Steuerberater) -- rein transportiert, ohne
+   * Einfluss auf das erwartete Autorisierungsverhalten dieses Tests.
+   */
+  async function tokenFor(organizationId: string, userType?: string): Promise<string> {
     return fakeTokenVerifier.issueTestToken({
-      sub: `synthetic-user-of-${organizationId}`,
+      sub: `synthetic-user-of-${organizationId}-${userType ?? 'default'}`,
       iss: TEST_ISSUER,
       aud: TEST_AUDIENCE,
       exp: nowInSeconds() + 3600,
       org_id: organizationId,
+      ...(userType ? { user_type: userType } : {}),
     });
   }
 
@@ -116,5 +136,27 @@ describe('Contracts HTTP-Layer — Mandantentrennungs-Gate (ADR 0002/0005/0006)'
       .expect(401);
 
     expect(response.body).not.toHaveProperty('contractNumber');
+  });
+
+  it('AC4 (ADR 0008): unterschiedliche Anmeldungen (userType) derselben GPA greifen jeweils nur auf diese eine GPA zu -- keine Vermischung', async () => {
+    const tokenAsSupplier = await tokenFor('supplier-synthetic-a', 'SUPPLIER');
+    const tokenAsTaxAdvisor = await tokenFor('supplier-synthetic-a', 'TAX_ADVISOR');
+
+    const responseAsSupplier = await request(app.getHttpServer())
+      .get('/contracts')
+      .set('Authorization', `Bearer ${tokenAsSupplier}`)
+      .expect(200);
+
+    const responseAsTaxAdvisor = await request(app.getHttpServer())
+      .get('/contracts')
+      .set('Authorization', `Bearer ${tokenAsTaxAdvisor}`)
+      .expect(200);
+
+    for (const contract of [...responseAsSupplier.body, ...responseAsTaxAdvisor.body]) {
+      expect(contract.supplierId).toBe('supplier-synthetic-a');
+    }
+    // Keine Vermischung: beide Anmeldungen derselben GPA sehen exakt
+    // dieselbe, korrekt gescopte Kontraktmenge.
+    expect(responseAsSupplier.body).toEqual(responseAsTaxAdvisor.body);
   });
 });

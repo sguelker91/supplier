@@ -19,8 +19,15 @@
  * - Kein Caching/Refresh der JWKS-Konfiguration über das hinaus, was
  *   `jose`s `createRemoteJWKSet` bereits intern übernimmt.
  *
+ * Seit [ADR 0008](../../../../docs/architecture/adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)
+ * gilt zusätzlich: `supplierId` wird aus dem GPA-tragenden
+ * Organization-Claim abgeleitet (`supplierId === GPA`, siehe
+ * `toSupplierContext`), und ein zusätzlicher `userType`-Claim wird
+ * extrahiert und OHNE Autorisierungswirkung in den Kontext übernommen.
+ *
  * ADRs: docs/architecture/adr/0004-zitadel-oidc-authentifizierung.md
  *       docs/architecture/adr/0002-mandantentrennung-kontrakte.md
+ *       docs/architecture/adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md
  */
 
 import { Inject, Injectable } from '@nestjs/common';
@@ -161,25 +168,40 @@ export class AuthGuardService {
   }
 
   /**
-   * Mapping ZITADEL-Organization-ID -> interne `supplierId`.
+   * Mapping GPA-tragender ZITADEL-Organization-Claim -> `supplierId`.
    *
-   * ADR 0004 Punkt 3 markiert dieses Mapping explizit als OFFENES
-   * Implementierungsdetail (1:1-Identität von Organization-ID und
+   * ADR 0004 Punkt 3 hatte dieses Mapping explizit als OFFENES
+   * Implementierungsdetail markiert (1:1-Identität von Organization-ID und
    * `supplierId`, oder ein separates Mapping-Feld in der
-   * `Supplier`-Entität). Dieser Konturwurf nimmt vereinfachend die
-   * 1:1-Variante an, damit der Verifikationsfluss sichtbar wird — das ist
-   * KEINE Festlegung dieser ADR-Frage, sondern eine bewusst markierte
-   * Annahme für den Konturwurf (siehe Implementierungsnotiz in der ADR).
+   * `Supplier`-Entität). [ADR 0008](../../../../docs/architecture/adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)
+   * präzisiert das fachlich: `supplierId === GPA`. Technisch bleibt der
+   * Mechanismus unverändert — es wird weiterhin der Organization-Claim des
+   * Tokens gelesen (`claims.organizationId`) —, aber dieser Claim ist jetzt
+   * verbindlich als GPA-tragend zu verstehen: Jede ZITADEL-Organization
+   * wird 1:1 pro Geschäftspartnernummer (GPA) provisioniert (ADR 0008,
+   * nicht mehr nur "pro Lieferant" wie in ADR 0004 unspezifisch
+   * formuliert). Ob die ZITADEL-Organization-ID selbst mit der GPA
+   * identisch ist oder die GPA nur als Organisations-Metadatum trägt,
+   * bleibt laut ADR 0008 ein offenes ZITADEL-Provisionierungsdetail — das
+   * ändert nichts an dieser Mapping-Logik.
+   *
+   * Zusätzlich wird laut ADR 0008 Entscheidung Punkt 2 der `userType`-Claim
+   * unverändert (ohne jede Autorisierungswirkung) in den Kontext
+   * übernommen. Ein fehlender/unbekannter `userType` ist — anders als ein
+   * fehlender GPA-Claim — KEIN Fehlerfall.
    */
   private toSupplierContext(claims: VerifiedTokenClaims): AuthenticatedSupplierContext {
     if (!claims.organizationId) {
       throw new AuthenticationError(
-        'Token enthält keine ZITADEL-Organization-Zugehörigkeit — supplierId kann nicht ' +
+        'Token enthält keinen GPA-tragenden Organization-Claim — supplierId (GPA) kann nicht ' +
           'verifiziert abgeleitet werden.',
         'missing_organization_claim',
       );
     }
 
-    return { supplierId: claims.organizationId };
+    return {
+      supplierId: claims.organizationId,
+      userType: claims.userType ?? undefined,
+    };
   }
 }
