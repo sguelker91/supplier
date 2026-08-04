@@ -128,3 +128,35 @@ Entitäten sind bereits an anderer Stelle klassifiziert:
   bereits klassifiziert in ADR 0001/ADR 0002.
 
 Kein neuer Klassifizierungsbedarf durch diese ADR.
+
+## Implementierungsnotizen
+
+Da die physische Repository-Struktur (`apps/web`, `apps/mobile`, `apps/api`,
+`docs/`, `.claude/` in einem Repository) bereits bestand, bestand die
+"Implementierung" dieser ADR ausschließlich aus einer Doku-Nachpflege, damit
+kein Dokument die Monorepo-Frage mehr als offen/unbegründet darstellt:
+
+- `CLAUDE.md`, Abschnitt "Tech-Stack": Verweist jetzt explizit auf diese ADR
+  als Begründung für "Monorepo-Layout unter `apps/`". Die "Noch offen"-Liste
+  wurde präzisiert: Sie bezieht sich nur noch auf die Werkzeug-Wahl
+  (Paketmanager, Monorepo-Tooling, Test-Framework, CI-Provider), nicht mehr
+  auf die Repo-Struktur selbst.
+- `README.md` (root), Abschnitt "Tech-Stack": Gleiche Klarstellung — Monorepo
+  als entschiedene Struktur (ADR 0003), Tooling/Test/CI/Auth weiterhin offen
+  und davon unabhängig.
+- `docs/architecture/overview.md` referenzierte diese ADR bereits korrekt als
+  getroffene Entscheidung (Abschnitte "Aktueller Stand" und "Offene
+  technische Entscheidungen") — keine Änderung nötig.
+- `apps/web/README.md`, `apps/mobile/README.md`, `apps/api/README.md`
+  enthalten keine Formulierungen, die die Monorepo-Struktur als
+  vorläufig/unentschieden darstellen (sie verweisen lediglich auf die noch
+  ausstehende erste Scaffolding-ADR); keine Änderung vorgenommen, um keine
+  neuen Fakten zu erfinden.
+
+Kein Workspace-Tooling, keine Turborepo-/Nx-Konfiguration und kein root
+`package.json` mit `workspaces`-Feld wurden angelegt — das bleibt laut
+Konsequenzen dieser ADR eine separate, spätere Entscheidung.
+
+Hinweis: Der Status dieser ADR ist im Dokument weiterhin als "Vorgeschlagen"
+vermerkt. Diese Implementierungsnotiz nimmt keine Statusänderung vor — das
+ist Sache des Architect-Agents, falls eine formelle Annahme noch aussteht.

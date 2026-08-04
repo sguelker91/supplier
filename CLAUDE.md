@@ -31,11 +31,15 @@ Durchgängig TypeScript:
 - **Mobile**: React Native / Expo (Android + iOS)
 - **API**: Node.js / NestJS
 
-Monorepo-Layout unter `apps/`. **Noch offen**: Paketmanager, Monorepo-Tooling
-(z. B. Turborepo/Nx/npm-Workspaces), Linting/Test-Framework, CI-Provider. Diese
-Entscheidungen trifft der Architect-Agent in seiner ersten ADR
-(`docs/architecture/adr/0001-*.md`), sobald reale Implementierungsarbeit beginnt.
-Bis dahin keine Konventionen annehmen, die nicht per ADR belegt sind.
+Monorepo-Layout unter `apps/` (siehe
+[ADR 0003](docs/architecture/adr/0003-monorepo-vs-polyrepo.md)). Diese ADR
+entscheidet ausschließlich die Grundsatzfrage Monorepo vs. Polyrepo — die
+konkrete Werkzeug-Wahl bleibt davon getrennt und ist weiterhin **offen**:
+Paketmanager, Monorepo-*Tooling* (z. B. Turborepo/Nx/npm-Workspaces),
+Linting/Test-Framework, CI-Provider. Diese Entscheidungen trifft der
+Architect-Agent in einer eigenen ADR, sobald eine Story oder eine
+CI-Pipeline sie zwingend benötigt. Bis dahin keine Konventionen annehmen,
+die nicht per ADR belegt sind.
 
 ## Monorepo-Layout
 

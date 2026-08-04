@@ -29,8 +29,12 @@ Durchgängig TypeScript:
 - **Mobile** (`apps/mobile`): React Native / Expo (Android + iOS)
 - **API** (`apps/api`): Node.js / NestJS
 
-Monorepo-Tooling, Test-Framework, CI-Provider und der Authentifizierungsmechanismus
-für Lieferanten sind noch nicht final entschieden — siehe
+Monorepo-Layout unter `apps/` (siehe
+[ADR 0003](docs/architecture/adr/0003-monorepo-vs-polyrepo.md)): Web, Mobile
+und API bleiben dauerhaft in einem Repository. Die konkrete
+Monorepo-*Tooling*-Wahl (z. B. Turborepo/Nx/npm-Workspaces), Test-Framework,
+CI-Provider und der Authentifizierungsmechanismus für Lieferanten sind davon
+unabhängig noch nicht final entschieden — siehe
 [`docs/architecture/overview.md`](docs/architecture/overview.md), Abschnitt
 "Offene technische Entscheidungen".
 
