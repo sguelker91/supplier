@@ -1,6 +1,7 @@
 ---
 description: Run the full PO -> Architect -> Developer -> QA -> Security -> DevOps -> Documentation pipeline for one feature request against the Lieferanten-Extranet, writing outputs to docs/ and a consolidated status report to docs/workflow/.
 argument-hint: <Feature-Beschreibung>
+disable-model-invocation: true
 ---
 
 Du führst die vollständige Feature-Pipeline für das Lieferanten-Extranet aus,
