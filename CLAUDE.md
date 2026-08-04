@@ -32,14 +32,19 @@ Durchgängig TypeScript:
 - **API**: Node.js / NestJS
 
 Monorepo-Layout unter `apps/` (siehe
-[ADR 0003](docs/architecture/adr/0003-monorepo-vs-polyrepo.md)). Diese ADR
-entscheidet ausschließlich die Grundsatzfrage Monorepo vs. Polyrepo — die
-konkrete Werkzeug-Wahl bleibt davon getrennt und ist weiterhin **offen**:
-Paketmanager, Monorepo-*Tooling* (z. B. Turborepo/Nx/npm-Workspaces),
-Linting/Test-Framework, CI-Provider. Diese Entscheidungen trifft der
-Architect-Agent in einer eigenen ADR, sobald eine Story oder eine
-CI-Pipeline sie zwingend benötigt. Bis dahin keine Konventionen annehmen,
-die nicht per ADR belegt sind.
+[ADR 0003](docs/architecture/adr/0003-monorepo-vs-polyrepo.md)). Werkzeug-Wahl
+ist entschieden: npm-Workspaces als Monorepo-Tooling, kein Turborepo/Nx
+([ADR 0007](docs/architecture/adr/0007-npm-workspaces-als-monorepo-tooling.md)),
+Jest als einheitliches Test-Framework für alle drei Apps
+([ADR 0005](docs/architecture/adr/0005-test-framework.md)), GitHub Actions
+als CI-Provider mit einer Pipeline für das gesamte Monorepo
+([ADR 0006](docs/architecture/adr/0006-github-actions-als-ci-provider.md)).
+Das Repository ist seit dem Monorepo-Bootstrap ein echtes, installierbares
+npm-Projekt (`npm install && npm test --workspaces`) — kein reiner
+Konturwurf mehr. Weiterhin offen: Details des Authentifizierungsmechanismus
+(siehe [ADR 0004](docs/architecture/adr/0004-zitadel-oidc-authentifizierung.md))
+und der Lobster-Transportmechanismus (siehe
+[ADR 0001](docs/architecture/adr/0001-lobster-kontrakt-datenkontrakt-und-sync-status.md)).
 
 ## Monorepo-Layout
 

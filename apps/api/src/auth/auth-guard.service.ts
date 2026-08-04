@@ -1,6 +1,4 @@
 /**
- * PROTOTYP / KONTURWURF — kein lauffähiger Code, kein Framework.
- *
  * Füllt den in ADR 0002 (`contract.types.ts`) skizzierten
  * `AuthenticatedSupplierContext` erstmals mit einer echten
  * Herkunftsgarantie, wie sie ADR 0004 Punkt 2/3 fordert und der
@@ -11,21 +9,26 @@
  * geprüften Claim eines ZITADEL-signierten Tokens abgeleitet — niemals
  * aus einem Client-Header, Pfad-/Query-/Body-Parameter.
  *
- * Was hier bewusst fehlt (kein Framework-Setup, siehe ADR 0003, "Offene
- * technische Entscheidungen"):
- * - Kein `@Injectable()`/NestJS-Guard (`CanActivate`) — sobald das
- *   Framework gesetzt ist, wird `authenticate()` zum Kern eines echten
- *   `ZitadelAuthGuard implements CanActivate`.
- * - Keine echte `TokenVerifier`-Implementierung (siehe
- *   `token-verifier.interface.ts`).
- * - Kein Caching/Refresh der JWKS-Konfiguration.
+ * Diese Klasse bleibt bewusst framework-unabhängig (kein NestJS-Import
+ * außer den DI-Decorators `@Injectable`/`@Inject`) — die eigentliche
+ * Anbindung an den HTTP-Layer erfolgt über `ZitadelAuthGuard`
+ * (`zitadel-auth.guard.ts`), der `authenticate()` in einem echten
+ * `CanActivate` nutzt, ohne die hier stehende Kernlogik zu duplizieren.
+ *
+ * Was hier bewusst (weiterhin) fehlt:
+ * - Kein Caching/Refresh der JWKS-Konfiguration über das hinaus, was
+ *   `jose`s `createRemoteJWKSet` bereits intern übernimmt.
  *
  * ADRs: docs/architecture/adr/0004-zitadel-oidc-authentifizierung.md
  *       docs/architecture/adr/0002-mandantentrennung-kontrakte.md
  */
 
+import { Inject, Injectable } from '@nestjs/common';
+
 import type { AuthenticatedSupplierContext } from '../contracts/contract.types';
+import { AUTH_GUARD_CONFIG } from './auth-guard-config.token';
 import { TokenVerificationError, type TokenVerifier } from './token-verifier.interface';
+import { TOKEN_VERIFIER } from './token-verifier.token';
 import type { VerifiedTokenClaims } from './zitadel-token.types';
 
 /** Fehlerfälle der fachlichen Claims-Policy-Prüfung (nach Signaturprüfung). */
@@ -72,10 +75,11 @@ export interface AuthGuardConfig {
  * ("Autorisierungs-Guard validiert den Auth-Kontext"), jetzt mit
  * tatsächlicher Tokenverifikation gemäß ADR 0004.
  */
+@Injectable()
 export class AuthGuardService {
   constructor(
-    private readonly tokenVerifier: TokenVerifier,
-    private readonly config: AuthGuardConfig,
+    @Inject(TOKEN_VERIFIER) private readonly tokenVerifier: TokenVerifier,
+    @Inject(AUTH_GUARD_CONFIG) private readonly config: AuthGuardConfig,
   ) {}
 
   /**

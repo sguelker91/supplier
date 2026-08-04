@@ -199,3 +199,143 @@ bleibt, und warum:**
 - Sollen Sachbearbeiter im Rahmen dieser Story bereits eine
   eingeschränkte "Anzeigen als Lieferant"-Funktion erhalten, oder ist
   das explizit außerhalb des Scopes (siehe Nicht-Ziele)?
+
+## Implementierungsnotizen (Monorepo-Bootstrap: lauffähiges Grundgerüst)
+
+**Status: lauffähig.** Der bisherige framework-freie Konturwurf (siehe
+Implementierungsnotiz oben) wurde in ein echtes, installierbares
+npm-Workspaces-Monorepo überführt: `npm install` im Root läuft sauber durch
+(verifiziert inkl. vollständig frischem `node_modules`/`package-lock.json`),
+und `npm run typecheck` sowie `npm run test` sind für alle drei Workspaces
+grün (`apps/api`: 19 Tests/3 Suiten, `apps/web`: 4 Tests/1 Suite,
+`apps/mobile`: 1 Test/1 Suite). `apps/web` baut zusätzlich sauber über
+`vite build`, `apps/api` über `nest build`.
+
+**Was gebaut wurde:**
+
+- **Root**: `package.json` mit `"workspaces": ["apps/api", "apps/web",
+  "apps/mobile"]` (ADR 0007, npm-Workspaces, kein Turborepo/Nx-Config).
+- **`apps/api` (NestJS, ADR 0002/ADR 0004)**:
+  - `ContractsController` ist jetzt ein echter `@Controller('contracts')`
+    mit `@Get()`/`@Get(':contractId')` und `@UseGuards(ZitadelAuthGuard)`;
+    Statuscode-Mapping (401 via Guard, 403/404/200 via
+    `NotFoundException`/`ForbiddenException`) unverändert aus ADR 0002
+    Punkt 4 übernommen.
+  - `ZitadelAuthGuard implements CanActivate` nutzt intern unverändert
+    `AuthGuardService.authenticate()` — die Kernlogik (Bearer-Extraktion,
+    Ablauf-/Issuer-/Audience-Prüfung, Mapping `organizationId ->
+    supplierId`) wurde NICHT neu geschrieben, nur per `@Injectable()`/
+    `@Inject()` ans Modulsystem angeschlossen.
+  - `TokenVerifier` hat jetzt eine echte Implementierung
+    (`JoseTokenVerifier`) auf Basis von `jose` gegen einen
+    `createRemoteJWKSet`-JWKS-Endpoint (`<issuer>/oauth/v2/keys`, wie in
+    ADR 0004 skizziert). Issuer/Audience werden aus Umgebungsvariablen
+    gelesen (`ZITADEL_ISSUER`/`ZITADEL_AUDIENCE`, siehe
+    `apps/api/.env.example`) — fehlen sie, verweigert `apps/api` den Start
+    mit einer klaren Fehlermeldung statt eines stillen Fallbacks.
+  - `ContractsService`/`ContractRepository` unverändert in der Kernlogik
+    (403-vs-404-Unterscheidung); eine `InMemoryContractRepository` macht das
+    Modul lauffähig/testbar und ist im Code klar als **Übergangslösung ohne
+    Datenbank-Entscheidung** markiert (keine DB/ORM-ADR vorhanden — wird
+    hier nicht im Alleingang nachgeholt).
+  - Jest + `ts-jest` eingerichtet. Drei Testdateien decken genau den in der
+    Aufgabenstellung benannten QA/Security-Blocker ab:
+    `contracts.service.spec.ts` (403 vs. 404 vs. 200, Mandantentrennung,
+    synthetische Testdaten), `auth-guard.service.spec.ts` (Guard lehnt
+    fehlendes/strukturell ungültiges/abgelaufenes Token sowie
+    Issuer-/Audience-Mismatch und fehlenden Organization-Claim ab) und
+    `test/contracts.e2e-spec.ts` (echter HTTP-Layer-Test via `supertest` +
+    `Test.createTestingModule`, inkl. des Kern-Gates "Lieferant A ruft
+    Kontrakt von Lieferant B ab → 403").
+  - `FakeTokenVerifier` (`src/auth/testing/fake-token-verifier.ts`) ist das
+    in ADR 0006 Punkt 3 geforderte Test-Double: signiert/verifiziert
+    Test-Tokens mit einem im Testprozess erzeugten RSA-Schlüsselpaar, ohne
+    Netzwerkzugriff und ohne jeden Bezug zur echten ZITADEL-Cloud-Instanz.
+    Alle Auth-Tests (inkl. des HTTP-Layer-Tests) nutzen ausschließlich
+    dieses Double via `overrideProvider(TOKEN_VERIFIER)`.
+- **`apps/web` (React + Vite)**: `ContractsListPage.tsx` ist jetzt eine
+  echte, renderbare React-Komponente (Kernlogik/Spalten/AC5/AC6/AC8-
+  Darstellung unverändert übernommen); `App.tsx` rendert sie vorerst mit
+  klar als Demo gekennzeichneten synthetischen Platzhalterdaten, da ein
+  echter Fetch gegen `apps/api` einen laufenden OIDC-Login voraussetzt.
+  `auth-client.ts`/`oidc-config.types.ts` bleiben wie in ADR 0004 vorgesehen
+  bewusst TODO/Platzhalter (kein echtes OIDC-SDK). Jest + `ts-jest` +
+  React Testing Library eingerichtet, mit einem Rendering-Test
+  (`ContractsListPage.spec.tsx`: Leer-Zustand/AC5, Pflichtspalten/AC2,
+  Abgelaufen-Kennzeichnung/AC8, Veraltet-Hinweis/AC6).
+- **`apps/mobile` (Expo)**: minimale `App.tsx`-Shell, `auth-client.ts`/
+  `oidc-config.types.ts` ebenfalls bewusst TODO/Platzhalter. Jest mit
+  `jest-expo`-Preset eingerichtet, ein Rendering-Test (`App.spec.tsx`, mit
+  `act()`-Wrapping wegen React 19s asynchronem Scheduler in
+  `react-test-renderer`).
+- **CI (ADR 0006)**: `.github/workflows/ci.yml` — eine Pipeline, Matrix-Job
+  pro App (`lint`/`typecheck`/`test`) plus ein separater Build-Job für
+  `apps/api`/`apps/web`. Kein Deployment/CD. Läuft nachweislich **ohne**
+  ZITADEL-Cloud-Secrets, da alle Auth-Tests gegen `FakeTokenVerifier` laufen
+  (ADR 0006 Punkt 3 eingehalten).
+
+**Wo die Umsetzung von den ADRs abweicht bzw. Umsetzungsdetails ergänzt,
+die keine ADR vorwegnehmen sollten, und warum:**
+
+- **Vite als Build-Tool für `apps/web`.** Keine ADR trifft eine
+  Web-Bundler-Entscheidung (ADR 0003/0007 entscheiden ausdrücklich nur
+  Monorepo-Struktur bzw. Workspace-/Paketmanager-Tooling). Vite wurde als
+  unstrittiges, leichtgewichtiges React+TypeScript-Standardsetup gewählt
+  (Kommentar dazu in `apps/web/vite.config.ts`). Falls das rückblickend
+  doch als architektonisch relevant genug für eine eigene ADR bewertet
+  wird, sollte der Architect-Agent das nachholen — hier bewusst nur als
+  dokumentiertes Umsetzungsdetail behandelt, keine stillschweigende
+  Festlegung.
+- **`jose` in Version 5.x statt 6.x.** `jose@6` ist ESM-only (kein
+  `require`-Export mehr), was mit dem NestJS-Standard-Build (CommonJS)
+  sowohl zur Laufzeit als auch mit `ts-jest` kollidiert
+  (`ERR_REQUIRE_ESM`/`SyntaxError: Unexpected token 'export'`). `jose@5`
+  bietet weiterhin einen CJS-Exportpfad (Dual-Package) und wurde deshalb
+  gewählt — reine Kompatibilitätsentscheidung, keine Architekturfrage.
+- **Jest-Versionsdivergenz zwischen `apps/mobile` (29.7.0 + `jest-expo`
+  ~57.0.3) und `apps/api`/`apps/web` (30.x).** Expo SDK 57s `jest-expo`-
+  Preset ist intern noch an Jest-29-Pakete gebunden. ADR 0005 schreibt
+  "Jest einheitlich" als **Test-Framework/-API** über alle drei Apps fest,
+  nicht zwingend eine identische Minor-/Major-Version — diese Divergenz
+  wird hier explizit dokumentiert statt stillschweigend in Kauf genommen,
+  da sie sonst wie eine versehentliche Inkonsistenz wirken könnte.
+- **`apps/api/package.json` listet `jest-environment-node` explizit als
+  `devDependency`**, obwohl das eigentlich eine implizite Default-Abhängigkeit
+  von Jest ist. Grund: Ohne diese explizite Angabe hoistete npm wegen der
+  oben genannten Jest-Versionsdivergenz eine mit `apps/mobile` kompatible,
+  aber zu `apps/api`s Jest 30 inkompatible `jest-environment-node@29`-Kopie
+  in den Root-`node_modules`, was `apps/api`s Tests mit
+  `this._moduleMocker.clearMocksOnScope is not a function` zum Absturz
+  brachte (Node löst Jests implizite `testEnvironment`-Abhängigkeit
+  projekt-relativ auf, nicht relativ zum installierten `jest`-Paket selbst).
+  Analog zum bereits vorhandenen Muster `jest-environment-jsdom` in
+  `apps/web` behoben — ein reines npm-Workspaces-Hoisting-Detail, keine
+  Architekturentscheidung.
+- **`ContractRepository` bleibt In-Memory (Übergangslösung).** Keine
+  Datenbank-/ORM-Wahl wurde getroffen (nicht Teil der referenzierten ADRs);
+  das Repository ist im Code klar als Platzhalter markiert und muss ersetzt
+  werden, sobald eine Persistenz-ADR vorliegt.
+- **Kein echter OIDC-Login-Flow.** `auth-client.ts`/`oidc-config.types.ts`
+  bleiben in `apps/web` **und** `apps/mobile` bewusst `declare
+  function`-Platzhalter, wie in ADR 0004 vorgesehen ("konkrete
+  Bibliothekswahl ... wird NICHT in dieser ADR getroffen"). AC7 (Redirect
+  zur Anmeldeseite) ist dadurch weiterhin nicht umgesetzt.
+- **Relativer Cross-App-Type-Import** (`apps/web/src/contracts/
+  ContractsListPage.tsx` importiert `import type { ... } from
+  '../../../api/src/contracts/contract.types'`) bleibt unverändert
+  bestehen, da ADR 0003 ein geteiltes Contract-Package explizit als
+  **künftige**, noch nicht umgesetzte Konsequenz nennt. Da es sich um einen
+  reinen `import type`-Import handelt, wird zur Laufzeit nichts aus
+  `apps/api` gebündelt (TypeScript/Vite/ts-jest entfernen ihn beim
+  Kompilieren vollständig) — funktional unkritisch, aber ein struktureller
+  Wermutstropfen, der bei einer künftigen Paket-Extraktion aufgelöst werden
+  sollte.
+- **Kein Ingestion-Adapter Lobster → apps/api**, **keine echte ZITADEL-
+  Projektkonfiguration für `apps/mobile`** und **kein EAS-/App-Store-Build**
+  für `apps/mobile` — alle drei bleiben wie in den referenzierten ADRs
+  bereits als offen markiert, nicht Teil dieses Bootstrap-Auftrags.
+- **Keine echten/plausibel-echten Lieferantendaten.** Alle Fixtures/Seed-
+  Daten (`InMemoryContractRepository`, Test-Suiten, `App.tsx`-Demo-Daten)
+  verwenden ausschließlich offensichtlich synthetische Platzhalterwerte
+  (z. B. `SYNTH-KONTRAKT-...`, `supplier-synthetic-a/-b`).
+

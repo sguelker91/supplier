@@ -42,6 +42,61 @@ Produktivbetrieb zwingend die Klärung von Datenresidenz (EU-Region bei
 ZITADEL Cloud) und ein Auftragsverarbeitungsvertrag — als harte, in der ADR
 dokumentierte Voraussetzung, nicht als getroffene Entscheidung.
 
+Zwei der bislang offenen Werkzeug-Grundsatzfragen sind nun ebenfalls
+entschieden: [ADR 0005](adr/0005-test-framework.md) legt **Jest** als
+einheitliches Test-Framework für `apps/api`, `apps/web` **und**
+`apps/mobile` fest (statt unterschiedlicher Runner je App), vor allem weil
+Expo/React Native de facto auf Jest angewiesen ist und ein einheitlicher
+Runner die Monorepo-Konsistenz aus ADR 0003 stützt.
+[ADR 0006](adr/0006-github-actions-als-ci-provider.md) legt **GitHub
+Actions** als CI-Provider fest (das Repository liegt bereits auf GitHub)
+mit **einer** logischen Pipeline für das gesamte Monorepo statt getrennter
+CI-Systeme je App, und entscheidet zusätzlich, dass CI-Auth-Tests gegen
+eine Test-Implementierung des in ADR 0004 definierten
+`TokenVerifier`-Interfaces laufen, nicht gegen die echte ZITADEL-Cloud-
+Instanz. Beide ADRs treffen ausschließlich die Grundsatzentscheidung;
+konkrete Workflow-Dateien, Test-Setup-Code, Coverage-Schwellen und
+Deployment-/CD-Ziele wurden bewusst **nicht** angelegt.
+
+Die zuletzt noch offene Werkzeug-Grundsatzfrage aus ADR 0003 ist nun
+ebenfalls entschieden: [ADR 0007](adr/0007-npm-workspaces-als-monorepo-tooling.md)
+legt **npm-Workspaces** (und damit npm als Paketmanager) als
+Monorepo-Tooling für `apps/web`, `apps/mobile` und `apps/api` fest —
+hauptsächlich wegen fehlender Zusatzabhängigkeit gegenüber einem bereits
+vorhandenen npm, geringstem bekanntem Reibungsrisiko mit dem
+Metro-Bundler von Expo/React Native (im Vergleich zu pnpms
+symlink-basiertem `node_modules`) und fehlendem aktuellem Bedarf für einen
+Task-Graph-/Caching-Layer. **Turborepo und Nx werden bewusst nicht
+eingeführt**, u. a. weil GitHub Actions bereits über Path-Filtering/
+Matrix-Builds ([ADR 0006](adr/0006-github-actions-als-ci-provider.md)) die
+selektive Pro-App-Ausführung abdeckt; eine Ergänzung um einen solchen
+Layer bleibt als spätere, durch reale Engpässe motivierte Folge-ADR
+möglich. Kein `package.json` und keine Workspace-Konfiguration wurden
+durch diese ADR angelegt.
+
+Alle sieben ADRs (0001–0007) sind inzwischen erstmals in ein tatsächlich
+lauffähiges Monorepo-Grundgerüst überführt worden (Developer-Bootstrap-Task,
+siehe Implementierungsnotiz "Monorepo-Bootstrap" in
+[`docs/backlog/lieferant-kontrakte-einsehen.md`](../backlog/lieferant-kontrakte-einsehen.md)):
+`npm install` im Root sowie `npm run typecheck`/`npm run test` je Workspace
+laufen nachweislich grün für `apps/api` (NestJS, inkl. echter
+`ZitadelAuthGuard`/`JoseTokenVerifier`-Implementierung und einem
+HTTP-Layer-Mandantentrennungstest gegen ein `TokenVerifier`-Test-Double),
+`apps/web` (React, baut über Vite) und `apps/mobile` (Expo, testet über das
+`jest-expo`-Preset). Dabei wurde eine bislang undokumentierte, aber nicht
+architektonisch strittige Detailentscheidung getroffen: **Vite** als
+Build-Tool für `apps/web` (keine ADR trifft eine Web-Bundler-Entscheidung;
+Vite wurde als unstrittiges, leichtgewichtiges React+TypeScript-Standard-
+setup gewählt, siehe Kommentar in `apps/web/vite.config.ts` sowie die
+Implementierungsnotiz im Backlog). Sollte sich das rückblickend doch als
+architekturrelevant genug für eine eigene ADR erweisen, ist das eine
+Folgeaufgabe für den Architect-Agenten. Ebenfalls dokumentiert: `apps/mobile`
+nutzt aus Kompatibilitätsgründen mit dem `jest-expo`-Preset eine ältere
+Jest-Minor-Version (29.x) als `apps/api`/`apps/web` (30.x) — eine bewusste,
+dokumentierte Abweichung, die ADR 0005 ("Jest einheitlich als
+Test-Framework/-API") nicht verletzt, da keine identische Versionsnummer
+gefordert ist.
+
 ## Bekannte Systemgrenzen
 
 - **ERP-System**: führendes System für Stammdaten, Kontrakte, Belege.
@@ -61,7 +116,10 @@ dokumentierte Voraussetzung, nicht als getroffene Entscheidung.
   JWT-Signaturprüfung (JWKS-Endpoint); Lieferanten-Identitätsdaten
   (Nutzer-Stammdaten, Organisationszugehörigkeit) werden bei ZITADEL Cloud
   gehalten. Datenresidenz/AVV sind vor Produktivbetrieb zwingend zu klären
-  (siehe ADR 0004, Datenklassifizierung).
+  (siehe ADR 0004, Datenklassifizierung). In CI wird diese Grenze bewusst
+  **nicht** überquert (siehe [ADR 0006](adr/0006-github-actions-als-ci-provider.md),
+  Punkt 3): Auth-Tests laufen gegen eine Test-Implementierung des
+  `TokenVerifier`-Interfaces, nicht gegen die echte ZITADEL-Cloud-Instanz.
 
 ## Zukünftige Anforderungen (noch nicht im Scope)
 
@@ -80,12 +138,22 @@ dokumentierte Voraussetzung, nicht als getroffene Entscheidung.
 
 ## Offene technische Entscheidungen
 
-- Konkrete Monorepo-Tooling-Wahl innerhalb des mit
-  [ADR 0003](adr/0003-monorepo-vs-polyrepo.md) bereits entschiedenen
-  Monorepos (z. B. Turborepo, Nx, npm/pnpm-Workspaces) — die grundsätzliche
-  Monorepo-vs.-Polyrepo-Frage selbst ist nicht mehr offen.
-- Test-Framework(s) für Web/Mobile/API
-- CI-Provider
+- Test-Framework(s) für Web/Mobile/API und CI-Provider sind mit
+  [ADR 0005](adr/0005-test-framework.md) (Jest, einheitlich für alle drei
+  Apps) und [ADR 0006](adr/0006-github-actions-als-ci-provider.md) (GitHub
+  Actions, eine Pipeline für das Monorepo) entschieden. Die konkrete
+  Monorepo-Tooling-Wahl (npm-Workspaces, kein Turborepo/Nx vorerst) ist
+  mit [ADR 0007](adr/0007-npm-workspaces-als-monorepo-tooling.md) ebenfalls
+  entschieden. Weiterhin offen und bewusst nicht Teil dieser ADRs: konkrete
+  Workflow-YAML-Struktur, Coverage-Schwellen, Transpiler-/Preset-Details
+  (`ts-jest`/`@swc/jest`/`jest-expo`), ein browserbasiertes E2E-Test-Framework
+  für `apps/web` (z. B. Playwright/Cypress), konkretes Secret-Scanning-Tool,
+  selbstgehostete vs. GitHub-gehostete Runner (relevant, falls künftig ein
+  CI-Test gegen eine interne ERP-/Lobster-Sandbox nötig wird),
+  Deployment-/CD-Ziele (reines CI-Scope, keine Aussage zu Rollout-
+  Mechanismen) sowie ein möglicher künftiger Task-Graph-/Caching-Layer
+  (Turborepo/Nx) auf Basis der in ADR 0007 gewählten npm-Workspaces, falls
+  reale Build-/Testzeit-Engpässe auftreten.
 - Feindetails des Authentifizierungsmechanismus für Lieferanten: IdP-Wahl
   (ZITADEL Cloud), Grundmodell (tokenbasiert, JWT-Verifikation gegen JWKS)
   und Mandantenmodell (eine ZITADEL Organization pro Lieferant) sind mit

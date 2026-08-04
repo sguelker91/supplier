@@ -1,0 +1,91 @@
+# CI-Pipeline für das Lieferanten-Extranet-Monorepo (ADR 0006).
+#
+# - Provider: GitHub Actions (ADR 0006 Punkt 1) -- kein zusätzlicher externer
+#   CI-Dienst.
+# - Eine logische Pipeline für das gesamte Monorepo (ADR 0006 Punkt 2), mit
+#   Path-Filtering auf Trigger-Ebene und einem Matrix-Job pro App
+#   (apps/api, apps/web, apps/mobile), statt drei getrennter CI-Systeme.
+# - Nutzt den in ADR 0005 festgelegten Jest-Runner für alle Teststufen.
+# - Läuft NIEMALS gegen die echte ZITADEL-Cloud-Instanz (ADR 0006 Punkt 3):
+#   die apps/api-Tests verifizieren ausschließlich gegen ein Test-Double des
+#   `TokenVerifier`-Interfaces (`FakeTokenVerifier`, selbst-signierte
+#   Test-Tokens, kein Netzwerkzugriff) und benötigen daher keine
+#   ZITADEL_ISSUER/ZITADEL_AUDIENCE-Secrets in CI.
+# - Kein Deployment/CD -- ausschließlich Lint/Typecheck/Test/Build.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "apps/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  test:
+    name: Lint/Typecheck/Test — ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, web, mobile]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Dependencies installieren (gesamtes Workspace, ADR 0007)
+        run: npm ci
+
+      - name: Lint (${{ matrix.app }})
+        run: npm run lint --workspace=apps/${{ matrix.app }} --if-present
+
+      - name: Typecheck (${{ matrix.app }})
+        run: npm run typecheck --workspace=apps/${{ matrix.app }} --if-present
+
+      - name: Test (${{ matrix.app }})
+        # ADR 0006 Punkt 3: keine ZITADEL-Cloud-Secrets nötig -- apps/api-Tests
+        # laufen ausschließlich gegen FakeTokenVerifier (siehe
+        # apps/api/src/auth/testing/fake-token-verifier.ts).
+        run: npm run test --workspace=apps/${{ matrix.app }} --if-present
+
+  build:
+    name: Build — ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, web]
+        # apps/mobile hat aktuell keinen CI-relevanten Produktions-Build
+        # (Expo-Builds laufen über EAS Build, nicht Teil dieser CI-Stufe;
+        # DevOps-/Deployment-Scope, nicht Teil dieser ADR/dieses Auftrags).
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Dependencies installieren
+        run: npm ci
+
+      - name: Build (${{ matrix.app }})
+        run: npm run build --workspace=apps/${{ matrix.app }} --if-present

@@ -1,0 +1,15 @@
+/**
+ * Jest-Konfiguration für apps/web gemäß ADR 0005 (Jest einheitlich) mit
+ * ts-jest als Transpiler und React Testing Library (Umsetzungsdetails,
+ * von ADR 0005 bewusst offengelassen).
+ */
+module.exports = {
+  rootDir: '.',
+  testEnvironment: 'jsdom',
+  transform: {
+    '^.+\\.(t|j)sx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }],
+  },
+  testRegex: '.*\\.(spec|test)\\.tsx?$',
+  moduleFileExtensions: ['tsx', 'ts', 'jsx', 'js', 'json'],
+  setupFilesAfterEnv: ['<rootDir>/src/test-setup/jest.setup.ts'],
+};
