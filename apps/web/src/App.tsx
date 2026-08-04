@@ -1,11 +1,33 @@
 /**
- * Minimale App-Shell. Rendert `ContractsListPage` vorerst mit
- * offensichtlich synthetischen Demo-Daten, da der echte Daten-Fetch
- * gegen `apps/api` einen laufenden OIDC-Login (ADR 0004) voraussetzt,
- * der laut ADR 0004 weiterhin bewusst als TODO markiert ist
- * (`src/auth/auth-client.ts`). Kein Routing/Menüpunkt (AC1) -- das ist
- * nicht Teil dieses Bootstrap-Auftrags.
+ * App-Shell mit echtem OIDC-Login-Flow (ADR 0004/0008).
+ *
+ * - `<AuthProvider>` (react-oidc-context) umschließt die gesamte App und
+ *   stellt den Auth-Kontext (`useAuth()`) für `LoginPage`, `LogoutButton`,
+ *   `ProtectedArea` und `AuthCallbackPage` bereit.
+ * - Die OIDC-`redirect_uri` (`AUTH_CALLBACK_PATH`, siehe
+ *   `auth/zitadel-config.ts`) wird per einfachem Pfad-Vergleich erkannt
+ *   (kein Routing-Paket entschieden, siehe `ProtectedArea.tsx` für die
+ *   ausführliche Begründung dieser bewussten Minimal-Lösung) und rendert
+ *   dann `AuthCallbackPage` statt der eigentlichen App.
+ * - Außerhalb des Callback-Pfads schützt `ProtectedArea` den Zugriff auf
+ *   `ContractsListPage` (AC7): nicht angemeldete Nutzer sehen die
+ *   `LoginPage` statt der Kontrakte.
+ *
+ * `ContractsListPage` erhält weiterhin offensichtlich synthetische
+ * Demo-Daten statt echter Daten aus `apps/api` -- ein echter Daten-Fetch
+ * (inkl. Lade-/Fehlerzuständen, Cache) ist laut bestehender
+ * Implementierungsnotiz in `docs/backlog/lieferant-kontrakte-einsehen.md`
+ * bewusst nicht Teil dieses Bootstrap-Auftrags und bleibt es auch hier;
+ * `auth/auth-client.ts::fetchMyContracts()` zeigt aber bereits, wie das
+ * jetzt vorhandene Access-Token (`auth.user?.access_token`) dafür als
+ * `Authorization: Bearer`-Header angehängt würde.
  */
+import { AuthProvider } from 'react-oidc-context';
+
+import { AuthCallbackPage } from './auth/AuthCallbackPage';
+import { LogoutButton } from './auth/LogoutButton';
+import { ProtectedArea } from './auth/ProtectedArea';
+import { AUTH_CALLBACK_PATH, createZitadelAuthProviderProps } from './auth/zitadel-config';
 import { ContractsListPage } from './contracts/ContractsListPage';
 
 const DEMO_DATA = {
@@ -25,5 +47,18 @@ const DEMO_DATA = {
 };
 
 export function App() {
-  return <ContractsListPage data={DEMO_DATA} />;
+  const isAuthCallback = window.location.pathname === AUTH_CALLBACK_PATH;
+
+  return (
+    <AuthProvider {...createZitadelAuthProviderProps()}>
+      {isAuthCallback ? (
+        <AuthCallbackPage />
+      ) : (
+        <ProtectedArea>
+          <LogoutButton />
+          <ContractsListPage data={DEMO_DATA} />
+        </ProtectedArea>
+      )}
+    </AuthProvider>
+  );
 }

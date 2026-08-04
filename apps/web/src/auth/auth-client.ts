@@ -1,66 +1,66 @@
 /**
- * BEWUSST WEITERHIN OHNE ECHTES OIDC-SDK: kein PKCE-/Krypto-Code
- * eingebunden. Läuft als echter TypeScript-Code im React+Vite-Projekt
- * (`apps/web`, siehe `vite.config.ts`/`package.json`) -- ein echtes SDK
- * (z. B. `oidc-client-ts`) ist laut ADR 0004 ("Konsequenzen":
- * Bibliothekswahl offen) weiterhin nicht entschieden/integriert.
+ * Echte OIDC-Client-Integration für `apps/web` auf Basis von
+ * `react-oidc-context`/`oidc-client-ts` (Authorization Code Flow mit PKCE
+ * gegen ZITADEL Cloud, siehe `zitadel-config.ts`).
  *
- * Zeigt den Ablauf, den laut ADR 0004 Punkt 1/2 ein künftiges echtes SDK
- * kapseln würde: Authorization Code Flow + PKCE gegen ZITADEL Cloud
- * (das laut ADR 0008 Punkt 4 unverändert der einzige Client-seitige Flow
- * bleibt -- Okta-MFA ist über Identity Brokering vollständig hinter
- * ZITADEL verborgen, `apps/web` benötigt KEINE Okta-spezifische Logik),
- * und wie das resultierende Access-Token gemäß ADR 0004 Punkt 2 als
- * `Authorization: Bearer`-Header an Requests gegen `apps/api` angehängt
- * wird.
+ * ADR-Bezug:
+ * - ADR 0004 Punkt 1/2: Authorization Code Flow + PKCE gegen ZITADEL Cloud,
+ *   Token wird als `Authorization: Bearer`-Header an `apps/api` gesendet.
+ * - ADR 0008 Punkt 4: Okta-MFA läuft vollständig hinter ZITADEL verborgen
+ *   (Identity Brokering) -- aus Sicht von `apps/web` bleibt es ein
+ *   gewöhnlicher OIDC-Redirect-Flow gegen ZITADEL, keine Okta-spezifische
+ *   Logik hier.
  *
- * Abweichung von der ursprünglichen ADR-0004-Implementierungsnotiz:
- * `loginWithZitadel()` war dort bewusst als `declare function` (reine
- * Typ-Signatur ohne JS-Laufzeitcode) markiert. Damit ein echter, testbarer
- * Login-Einstiegspunkt (`LoginPage.tsx`) diese Funktion tatsächlich
- * aufrufen kann, ohne zur Laufzeit mit einem verwirrenden
- * "is not a function"-Fehler abzustürzen, ist `loginWithZitadel()` jetzt
- * eine echte, aber bewusst fehlschlagende Funktion: Sie wirft einen klar
- * beschrifteten Fehler statt eine unsichere/unvollständige
- * Krypto-Eigenimplementierung vorzutäuschen. Das ist KEINE funktionierende
- * PKCE-Implementierung -- lediglich ein ehrlicher, aufrufbarer Platzhalter.
- *
- * ECHTE IMPLEMENTIERUNG (bewusst NICHT Teil dieses Konturwurfs): PKCE
- * Code-Verifier/-Challenge-Erzeugung, Redirect zu ZITADEL, Code-Exchange
- * gegen den ZITADEL-Token-Endpoint, sichere Token-Ablage (z. B.
- * In-Memory + Silent Refresh statt `localStorage`, wegen XSS-Risiko bei
- * dauerhaft persistierten Tokens) — das übernimmt normalerweise eine
- * geprüfte OIDC-Bibliothek, keine Eigenimplementierung.
+ * Abweichung von der vorherigen Implementierungsnotiz (siehe
+ * `docs/backlog/lieferanten-anmeldung-gpa.md`): `loginWithZitadel()` wirft
+ * nicht mehr immer einen Fehler, sondern löst über den von
+ * `react-oidc-context` bereitgestellten Auth-Kontext (`useAuth()`) den
+ * echten `signinRedirect()`-Aufruf aus. PKCE-Code-Verifier/-Challenge,
+ * Redirect zu ZITADEL und der eigentliche Code-Austausch gegen den
+ * ZITADEL-Token-Endpoint sind jetzt durch `oidc-client-ts` implementiert,
+ * keine Eigenimplementierung.
  *
  * ADR: docs/architecture/adr/0004-zitadel-oidc-authentifizierung.md
  *      docs/architecture/adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md
  */
 
-import type { OidcClientConfig } from './oidc-config.types';
+import type { AuthContextProps } from 'react-oidc-context';
 
-/** Ergebnis eines erfolgreichen Logins, wie es ein echtes OIDC-SDK liefern würde. */
-export interface AuthenticationSession {
-  accessToken: string;
-  /** Unix-Timestamp (Sekunden), ab dem das Token erneuert werden muss. */
-  expiresAt: number;
+/**
+ * Löst den Authorization-Code-Flow mit PKCE gegen ZITADEL aus (Redirect zu
+ * ZITADEL). `auth` ist der von `useAuth()` (react-oidc-context) gelieferte
+ * Kontext einer Komponente unterhalb von `<AuthProvider>` (siehe
+ * `App.tsx`/`zitadel-config.ts`). Wirft weiterhin einen Fehler, wenn der
+ * Redirect-Versuch selbst fehlschlägt (z. B. Netzwerkproblem beim Laden der
+ * ZITADEL-Discovery-Dokumente) -- kein stiller Fehlschlag.
+ */
+export async function loginWithZitadel(auth: AuthContextProps): Promise<void> {
+  await auth.signinRedirect();
 }
 
 /**
- * Würde in der echten Umsetzung den Nutzer zu ZITADEL umleiten
- * (Authorization Code Flow + PKCE, ADR 0004 Punkt 2) und nach Rückkehr den
- * Autorisierungscode gegen ein Token tauschen. Wirft aktuell IMMER einen
- * Fehler, weil kein echtes OIDC-SDK integriert ist (siehe Datei-Kommentar)
- * -- bewusst kein stiller Erfolg, kein erfundenes Token.
+ * Beendet die lokale Sitzung und meldet den Nutzer zusätzlich bei ZITADEL
+ * ab (AC9): `signoutRedirect()` leitet zum ZITADEL End-Session-Endpoint
+ * weiter (von `oidc-client-ts` aus den Discovery-Dokumenten der Instanz
+ * aufgelöst, siehe `zitadel-config.ts`), sodass ein erneuter Zugriff auf
+ * geschützte Bereiche eine vollständige erneute Anmeldung inklusive
+ * Okta-MFA erfordert.
  */
-export async function loginWithZitadel(
-  config: OidcClientConfig,
-): Promise<AuthenticationSession> {
-  throw new Error(
-    'loginWithZitadel() ist noch nicht implementiert: Es fehlt weiterhin eine echte ' +
-      'OIDC-Client-SDK-Integration mit PKCE gegen ZITADEL (ADR 0004 Punkt 1/2, ' +
-      '"Konsequenzen" -- Bibliothekswahl offen). Dieser Platzhalter wirft bewusst einen ' +
-      'Fehler, statt eine unsichere Krypto-Eigenimplementierung vorzutäuschen.',
-  );
+export async function logoutFromZitadel(auth: AuthContextProps): Promise<void> {
+  await auth.signoutRedirect();
+}
+
+/**
+ * Navigiert nach einem erfolgreichen OIDC-Redirect-Callback
+ * (`AuthCallbackPage`) zurück in den geschützten Bereich der App. Als
+ * eigene, kleine Funktion ausgelagert (statt `window.location.assign`
+ * direkt in der Komponente aufzurufen), damit Tests diesen einen
+ * Navigations-Seiteneffekt gezielt mocken können, ohne den
+ * schreibgeschützten `window.location`-Global in jsdom manipulieren zu
+ * müssen.
+ */
+export function navigateToProtectedArea(): void {
+  window.location.assign('/');
 }
 
 /**
@@ -72,16 +72,28 @@ export async function loginWithZitadel(
  * `docs/security/lieferant-kontrakte-einsehen.md`: "supplierId ... niemals
  * aus einem vom Client setzbaren Header/Cookie-Wert ohne
  * Signaturprüfung").
+ *
+ * Wirft absichtlich einen Fehler statt einen Request ohne Token
+ * abzusetzen, wenn kein Access-Token vorliegt (z. B. Sitzung abgelaufen,
+ * bevor die anfragende Komponente das bemerkt hat) -- kein unauthentifizierter
+ * Fallback-Request gegen lieferantenscoped Endpunkte.
  */
 export function withAuthHeader(
-  session: AuthenticationSession,
+  accessToken: string | undefined,
   init: RequestInit = {},
 ): RequestInit {
+  if (!accessToken) {
+    throw new Error(
+      'withAuthHeader() benötigt ein Access-Token -- kein Request gegen apps/api ohne ' +
+        'Authentifizierung (AC7: nicht angemeldete Nutzer erhalten keine Daten).',
+    );
+  }
+
   return {
     ...init,
     headers: {
       ...init.headers,
-      Authorization: `Bearer ${session.accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
     },
   };
 }
@@ -89,19 +101,24 @@ export function withAuthHeader(
 /**
  * Beispiel, wie ein Contracts-Request in `apps/web` (siehe
  * `../contracts/ContractsListPage.tsx`) das Access-Token nutzen würde.
- * Kein echter Fetch/HTTP-Client-Aufbau ist hier entschieden — reine
- * Konturskizze.
+ * `apiBaseUrl` und der konkrete Zeitpunkt des Aufrufs (z. B. beim Mounten
+ * einer Routing-/Datenlade-Schicht) sind weiterhin nicht Teil dieses
+ * Konturwurfs -- `App.tsx` rendert aktuell weiterhin Demo-Daten für
+ * `ContractsListPage` (siehe Implementierungsnotiz), da ein echtes
+ * Daten-Fetching-Konzept (Cache, Ladezustände, Fehleranzeige) über den
+ * Scope dieser Story hinausgeht.
  */
 export async function fetchMyContracts(
   apiBaseUrl: string,
-  session: AuthenticationSession,
+  accessToken: string | undefined,
 ): Promise<unknown> {
-  const response = await fetch(`${apiBaseUrl}/contracts`, withAuthHeader(session));
+  const response = await fetch(`${apiBaseUrl}/contracts`, withAuthHeader(accessToken));
 
   if (response.status === 401) {
-    // AC7: fehlende/abgelaufene Session -> Weiterleitung zur Anmeldeseite.
-    // Konkrete Redirect-/Refresh-Logik ist Teil des noch offenen
-    // SDK-/Routing-Setups, nicht dieses Konturwurfs.
+    // AC7: fehlende/abgelaufene Session -> Weiterleitung zur Anmeldeseite
+    // erfolgt bereits vorher durch `ProtectedArea` (siehe `App.tsx`); ein
+    // 401 an dieser Stelle bedeutet, dass ein zuvor gültiges Token
+    // zwischenzeitlich abgelaufen ist.
     throw new Error('Nicht authentifiziert — erneuter Login erforderlich.');
   }
 

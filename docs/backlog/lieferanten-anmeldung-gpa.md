@@ -354,3 +354,156 @@ der Aufgabenstellung gefordert.
 --workspaces` laufen grün (API: 23 Tests / 3 Suites, Web: 7 Tests /
 2 Suites, Mobile: 1 Test / 1 Suite, unverändert gegenüber vorher plus die
 oben beschriebenen neuen Fälle).
+
+## Implementierungsnotizen (Update 2026-08-04: echter OIDC-Login-Flow in `apps/web`)
+
+Schließt einen Teil der oben unter "Nicht umgesetzt" gelisteten Lücken für
+`apps/web` (AC1/AC7/AC9, teilweise AC8): `apps/web/package.json` enthielt
+bereits `oidc-client-ts`/`react-oidc-context` als Dependency (Bibliothekswahl
+für ADR 0004 "Konsequenzen" -- aktiv gepflegtes OIDC-Client-SDK mit
+nativer PKCE-Unterstützung und einem React-Context-Wrapper). Diese Änderung
+verdrahtet sie erstmals in lauffähigen Code. `apps/api` und `apps/mobile`
+bleiben unverändert.
+
+**Neu/geändert in `apps/web`:**
+
+- `src/auth/zitadel-config.ts` (neu): Trägt die realen, in ADR 0004
+  ("Implementierungsnotizen") dokumentierten Werte (Issuer
+  `https://supplier-janwkz.eu1.zitadel.cloud`, Web-Client-ID
+  `384798128626288647`, Public Client mit PKCE, kein Client-Secret) und
+  baut daraus die `AuthProviderNoUserManagerProps`-Konfiguration für
+  `react-oidc-context` auf (`authority`, `client_id`, `redirect_uri` =
+  `<origin>/auth/callback`, `post_logout_redirect_uri`, `response_type:
+  'code'`, `scope: 'openid profile email'`). Ersetzt den bisherigen
+  `OidcClientConfig`-Typ/`oidc-config.types.ts` (gelöscht), dessen Form
+  (`issuer`/`clientId`/`scopes[]`) nicht 1:1 der `UserManagerSettings`-Form
+  von `oidc-client-ts` entsprach.
+- `src/auth/auth-client.ts` (überarbeitet): `loginWithZitadel(auth)` und
+  neu `logoutFromZitadel(auth)` nehmen jetzt den von `useAuth()`
+  (react-oidc-context) gelieferten `AuthContextProps`-Kontext entgegen und
+  rufen `auth.signinRedirect()` bzw. `auth.signoutRedirect()` auf -- echter
+  Authorization-Code-Flow mit PKCE (Redirect zu ZITADEL, Code-Austausch
+  gegen den Token-Endpunkt) statt des bisherigen, bewusst immer
+  fehlschlagenden Platzhalters. `withAuthHeader()`/`fetchMyContracts()`
+  nehmen jetzt direkt einen `accessToken: string | undefined` entgegen
+  (z. B. `auth.user?.access_token`) und werfen weiterhin einen Fehler statt
+  einen unauthentifizierten Request abzusetzen, wenn kein Token vorliegt.
+  Neu: `navigateToProtectedArea()` als eigene, kleine Funktion (siehe
+  `AuthCallbackPage.tsx`), rein herausgezogen, damit Tests diesen
+  Navigations-Seiteneffekt mocken können, ohne den in der verwendeten
+  jsdom-Version schreibgeschützten `window.location`-Global zu
+  manipulieren.
+- `src/auth/LoginPage.tsx` (überarbeitet): bezieht den Auth-Kontext jetzt
+  über `useAuth()` statt einer `config`-Prop; löst bei Klick auf "Anmelden"
+  den echten `signinRedirect()`-Aufruf aus. AC6 (kein Self-Signup) bleibt
+  unverändert erfüllt (kein Registrierungs-/Sign-up-Element).
+- `src/auth/AuthCallbackPage.tsx` (neu): Ziel der `redirect_uri`
+  (`/auth/callback`). Führt selbst **keinen** Code-Austausch durch --
+  `react-oidc-context`s `<AuthProvider>` erkennt beim Mounten anhand der
+  `code`/`state`-Query-Parameter automatisch einen ausstehenden
+  Sign-in-Callback und ruft intern `userManager.signinCallback()` auf,
+  bevor `AuthCallbackPage` überhaupt rendert. Die Komponente zeigt
+  ausschließlich Lade-/Fehlerzustand und navigiert nach erfolgreichem
+  Abschluss (`isAuthenticated === true`) zurück in den geschützten
+  Bereich.
+- `src/auth/ProtectedArea.tsx` (neu, AC7): Rendert bei fehlender/
+  abgelaufener Anmeldung `LoginPage` statt der übergebenen `children`
+  (in `App.tsx`: `LogoutButton` + `ContractsListPage`). **Bewusste
+  Abweichung/Präzisierung:** AC7 spricht von "Weiterleitung zur
+  Anmeldeseite" -- da `apps/web` weiterhin keine Routing-Bibliothek
+  entschieden hat (keine ADR dazu, kein bestehender Code) und die
+  Einführung einer solchen eine nicht-triviale Architekturfrage wäre, die
+  hier nicht im Alleingang beantwortet werden soll, wird stattdessen
+  In-Place die `LoginPage` gerendert (kein URL-/History-Wechsel zu einer
+  eigenen `/login`-Route). Der von AC7 geforderte fachliche Effekt --
+  nicht angemeldete Nutzer sehen keine geschützten Daten, sondern die
+  Anmeldeseite -- ist damit erfüllt; eine "harte" URL-Navigation wäre eine
+  zusätzliche, hier nicht getroffene Architekturentscheidung.
+- `src/auth/LogoutButton.tsx` (neu, AC9): Sichtbar nur für angemeldete
+  Nutzer (`auth.isAuthenticated`); ruft bei Klick `logoutFromZitadel(auth)`
+  auf, was sowohl die lokale `react-oidc-context`-Sitzung beendet als auch
+  über `auth.signoutRedirect()` den ZITADEL End-Session-Endpoint aufruft
+  (von `oidc-client-ts` aus den Discovery-Dokumenten der Instanz
+  aufgelöst) -- ein erneuter Zugriff erfordert danach eine vollständige
+  erneute Anmeldung inklusive Okta-MFA.
+- `src/App.tsx` (überarbeitet): `LoginPage` ist jetzt tatsächlich
+  verdrahtet (bislang laut vorheriger Implementierungsnotiz bewusst nicht
+  der Fall). `<AuthProvider {...createZitadelAuthProviderProps()}>`
+  umschließt die App; einfacher Pfad-Vergleich
+  (`window.location.pathname === '/auth/callback'`) entscheidet zwischen
+  `AuthCallbackPage` und dem durch `ProtectedArea` geschützten Bereich.
+  `ContractsListPage` erhält weiterhin dieselben synthetischen Demo-Daten
+  wie zuvor -- ein echter Daten-Fetch gegen `GET /contracts` (inkl.
+  Lade-/Fehlerzuständen) bleibt bewusst außerhalb des Scopes dieser
+  Änderung (unverändert gegenüber der bestehenden
+  `ContractsListPage`-Implementierungsnotiz aus
+  `docs/backlog/lieferant-kontrakte-einsehen.md`).
+
+**Token-Speicherung -- getroffene Entscheidung:** Es wird bewusst **kein**
+eigener `userStore` konfiguriert. `oidc-client-ts` verwendet ohne
+explizite Angabe standardmäßig einen `WebStorageStateStore` auf Basis von
+`window.sessionStorage` (verifiziert im Paket-Quellcode,
+`UserManagerSettingsStore`-Konstruktor). Abwägung gegenüber den beiden in
+der Aufgabenstellung genannten Alternativen:
+
+- **Gewählt: sessionStorage-Persistenz des `UserManager` (Bibliotheks-
+  Standard).** Vorteile: kein Rohtoken landet dauerhaft in `localStorage`
+  (dort bliebe es über Browser-Neustarts hinweg abrufbar -- größere
+  XSS-Ausbeute-Fläche); `sessionStorage` ist tab-/fenstergebunden und wird
+  beim Schließen des Tabs/Browsers automatisch geleert; kein zusätzlicher
+  Eigencode für einen sicherheitskritischen Mechanismus (weniger
+  Fehlerfläche als eine selbst gebaute In-Memory-Lösung).
+- **Verworfen: reine In-Memory-Ablage + Silent-Renew.** Wäre gegenüber
+  `sessionStorage` XSS-technisch nicht grundsätzlich sicherer (ein
+  erfolgreicher XSS-Angriff kann zur Laufzeit ohnehin auf In-Memory-State
+  zugreifen, der gerade im selben Tab aktiv ist) und hätte zusätzlich
+  einen Reload-Verlust der Sitzung zur Folge (Token wäre nach jedem
+  Seiten-Reload weg), ohne dass diese Aufgabe eine Anforderung an
+  "Sitzung übersteht Reload nicht" stellt. Silent Renew selbst wurde
+  **nicht** aktiviert (`automaticSilentRenew` bleibt auf dem Default
+  `false`) -- Token-Lebensdauer/Refresh-Strategie sind laut ADR 0004
+  "Konsequenzen" weiterhin offen; eine eigene Festlegung hier würde diese
+  offene Architekturfrage im Alleingang beantworten, statt sie
+  auszuweisen.
+
+**Bewusst weiterhin nicht umgesetzt / offen (keine stillschweigende
+Festlegung):**
+
+- Kein echter Daten-Fetch von `ContractsListPage` gegen `GET /contracts`
+  (weiterhin Demo-Daten in `App.tsx`) -- vorbestehende Scope-Grenze,
+  unverändert durch diese Änderung.
+- Keine echte URL-basierte Navigation für AC7 (siehe Begründung bei
+  `ProtectedArea.tsx` oben) -- eine Routing-Entscheidung ist weiterhin
+  offen und nicht Gegenstand dieser Änderung.
+- `apps/mobile` bleibt unverändert (weiterhin `declare function
+  loginWithZitadel`, kein Login-Screen) -- außerhalb des Auftrags dieser
+  Änderung, unverändert gegenüber der vorherigen Implementierungsnotiz.
+- Silent Renew / automatische Token-Erneuerung nicht aktiviert (siehe
+  Token-Speicherung oben) -- Token-Lebensdauer/Refresh-Strategie bleiben
+  laut ADR 0004 offen.
+- Kein Audit-/Fehler-Logging für Login-/Logout-Ereignisse ergänzt --
+  unverändert als offener Punkt aus Security-/QA-Bericht bestehen
+  gelassen, nicht Teil dieses Auftrags.
+- Die ZITADEL-Konfigurationswerte (Issuer, Client-ID) sind in
+  `zitadel-config.ts` als Klartext-Konstanten hinterlegt, nicht über eine
+  Umgebungsvariable konfigurierbar -- unverändert gegenüber dem in ADR
+  0004 als offen dokumentierten Punkt ("gehören perspektivisch in eine
+  Umgebungskonfiguration"); da es sich um öffentliche, nicht-geheime
+  Public-Client-Kennungen handelt, ist dies kein Geheimnis-Leak, aber ein
+  offener Punkt für Mehrfach-Umgebungen (Staging/Produktion mit
+  unterschiedlichen ZITADEL-Projekten).
+
+**Verifikation:** `npm run typecheck --workspaces` und `npm test
+--workspaces` laufen grün: API 23 Tests/3 Suites (unverändert), Web
+**22 Tests/7 Suites** (neu: `AuthCallbackPage.spec.tsx`,
+`LogoutButton.spec.tsx`, `ProtectedArea.spec.tsx`, `App.spec.tsx`,
+`zitadel-config.spec.ts`; überarbeitet: `LoginPage.spec.tsx`), Mobile
+1 Test/1 Suite (unverändert). Alle drei Workspaces `npm run typecheck`
+ohne Fehler.
+
+**Manuell nicht verifizierbar in dieser Umgebung:** Ein echter Login gegen
+die reale ZITADEL-Instanz (`https://supplier-janwkz.eu1.zitadel.cloud`)
+wurde nicht durchgeführt (kein Netzwerkzugriff/keine echten Testnutzer in
+dieser Entwicklungsumgebung) -- alle Tests mocken `react-oidc-context`
+vollständig. Die tatsächliche Okta-MFA-Durchsetzung (AC8) bleibt weiterhin
+außerhalb von `apps/*`, wie bereits in ADR 0008 dokumentiert.
