@@ -1,6 +1,8 @@
 /**
- * PROTOTYP / KONTURWURF — kein lauffähiger Code, keine echte Expo-App,
- * kein echtes OIDC-SDK eingebunden.
+ * BEWUSST WEITERHIN PLATZHALTER: kein echtes OIDC-SDK eingebunden. Läuft
+ * jetzt als echter TypeScript-Code im Expo-Projekt (`apps/mobile`, siehe
+ * `app.json`/`package.json`), aber `loginWithZitadel()` bleibt eine reine
+ * Signatur ohne Implementierung.
  *
  * Zeigt den Ablauf, den laut ADR 0004 Punkt 1/2 ein künftiges echtes SDK
  * für Expo (naheliegender Kandidat: `expo-auth-session`, unterstützt

@@ -74,6 +74,29 @@ Layer bleibt als spätere, durch reale Engpässe motivierte Folge-ADR
 möglich. Kein `package.json` und keine Workspace-Konfiguration wurden
 durch diese ADR angelegt.
 
+Alle sieben ADRs (0001–0007) sind inzwischen erstmals in ein tatsächlich
+lauffähiges Monorepo-Grundgerüst überführt worden (Developer-Bootstrap-Task,
+siehe Implementierungsnotiz "Monorepo-Bootstrap" in
+[`docs/backlog/lieferant-kontrakte-einsehen.md`](../backlog/lieferant-kontrakte-einsehen.md)):
+`npm install` im Root sowie `npm run typecheck`/`npm run test` je Workspace
+laufen nachweislich grün für `apps/api` (NestJS, inkl. echter
+`ZitadelAuthGuard`/`JoseTokenVerifier`-Implementierung und einem
+HTTP-Layer-Mandantentrennungstest gegen ein `TokenVerifier`-Test-Double),
+`apps/web` (React, baut über Vite) und `apps/mobile` (Expo, testet über das
+`jest-expo`-Preset). Dabei wurde eine bislang undokumentierte, aber nicht
+architektonisch strittige Detailentscheidung getroffen: **Vite** als
+Build-Tool für `apps/web` (keine ADR trifft eine Web-Bundler-Entscheidung;
+Vite wurde als unstrittiges, leichtgewichtiges React+TypeScript-Standard-
+setup gewählt, siehe Kommentar in `apps/web/vite.config.ts` sowie die
+Implementierungsnotiz im Backlog). Sollte sich das rückblickend doch als
+architekturrelevant genug für eine eigene ADR erweisen, ist das eine
+Folgeaufgabe für den Architect-Agenten. Ebenfalls dokumentiert: `apps/mobile`
+nutzt aus Kompatibilitätsgründen mit dem `jest-expo`-Preset eine ältere
+Jest-Minor-Version (29.x) als `apps/api`/`apps/web` (30.x) — eine bewusste,
+dokumentierte Abweichung, die ADR 0005 ("Jest einheitlich als
+Test-Framework/-API") nicht verletzt, da keine identische Versionsnummer
+gefordert ist.
+
 ## Bekannte Systemgrenzen
 
 - **ERP-System**: führendes System für Stammdaten, Kontrakte, Belege.

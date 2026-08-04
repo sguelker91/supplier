@@ -1,0 +1,18 @@
+{
+  "name": "supplier-extranet",
+  "private": true,
+  "description": "Lieferanten-Extranet Monorepo (apps/web, apps/mobile, apps/api) — npm-Workspaces gemäß ADR 0007, kein Turborepo/Nx.",
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "apps/mobile"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

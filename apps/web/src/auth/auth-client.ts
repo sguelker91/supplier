@@ -1,12 +1,14 @@
 /**
- * PROTOTYP / KONTURWURF — kein lauffähiger Code, keine echte React-App,
- * kein echtes OIDC-SDK eingebunden.
+ * BEWUSST WEITERHIN PLATZHALTER: kein echtes OIDC-SDK eingebunden. Läuft
+ * jetzt als echter TypeScript-Code im React+Vite-Projekt (`apps/web`,
+ * siehe `vite.config.ts`/`package.json`), aber `loginWithZitadel()` bleibt
+ * eine reine Signatur ohne Implementierung -- ein echtes SDK (z. B.
+ * `oidc-client-ts`) ist laut ADR 0004 ("Konsequenzen": Bibliothekswahl
+ * offen) weiterhin nicht entschieden/integriert.
  *
  * Zeigt den Ablauf, den laut ADR 0004 Punkt 1/2 ein künftiges echtes SDK
- * (z. B. `oidc-client-ts`, sobald Paketmanager/Web-Tooling entschieden
- * sind, siehe ADR 0003 "Offene technische Entscheidungen") kapseln würde:
- * Authorization Code Flow + PKCE gegen ZITADEL Cloud, und wie das
- * resultierende Access-Token gemäß ADR 0004 Punkt 2 als
+ * kapseln würde: Authorization Code Flow + PKCE gegen ZITADEL Cloud, und
+ * wie das resultierende Access-Token gemäß ADR 0004 Punkt 2 als
  * `Authorization: Bearer`-Header an Requests gegen `apps/api` angehängt
  * wird.
  *

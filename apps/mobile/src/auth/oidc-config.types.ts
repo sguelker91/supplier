@@ -1,6 +1,6 @@
 /**
- * PROTOTYP / KONTURWURF — kein lauffähiger Code, keine echte Expo-App,
- * kein echtes OIDC-SDK eingebunden.
+ * BEWUSST WEITERHIN PLATZHALTER: kein echtes OIDC-SDK eingebunden (siehe
+ * `auth-client.ts`). Läuft als echter TypeScript-Code im Expo-Projekt.
  *
  * Bildet die Konfiguration ab, die laut ADR 0004
  * ("ZITADEL Cloud als OIDC-Identity-Provider für
