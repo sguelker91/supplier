@@ -58,6 +58,22 @@ Instanz. Beide ADRs treffen ausschließlich die Grundsatzentscheidung;
 konkrete Workflow-Dateien, Test-Setup-Code, Coverage-Schwellen und
 Deployment-/CD-Ziele wurden bewusst **nicht** angelegt.
 
+Die zuletzt noch offene Werkzeug-Grundsatzfrage aus ADR 0003 ist nun
+ebenfalls entschieden: [ADR 0007](adr/0007-npm-workspaces-als-monorepo-tooling.md)
+legt **npm-Workspaces** (und damit npm als Paketmanager) als
+Monorepo-Tooling für `apps/web`, `apps/mobile` und `apps/api` fest —
+hauptsächlich wegen fehlender Zusatzabhängigkeit gegenüber einem bereits
+vorhandenen npm, geringstem bekanntem Reibungsrisiko mit dem
+Metro-Bundler von Expo/React Native (im Vergleich zu pnpms
+symlink-basiertem `node_modules`) und fehlendem aktuellem Bedarf für einen
+Task-Graph-/Caching-Layer. **Turborepo und Nx werden bewusst nicht
+eingeführt**, u. a. weil GitHub Actions bereits über Path-Filtering/
+Matrix-Builds ([ADR 0006](adr/0006-github-actions-als-ci-provider.md)) die
+selektive Pro-App-Ausführung abdeckt; eine Ergänzung um einen solchen
+Layer bleibt als spätere, durch reale Engpässe motivierte Folge-ADR
+möglich. Kein `package.json` und keine Workspace-Konfiguration wurden
+durch diese ADR angelegt.
+
 ## Bekannte Systemgrenzen
 
 - **ERP-System**: führendes System für Stammdaten, Kontrakte, Belege.
@@ -99,22 +115,22 @@ Deployment-/CD-Ziele wurden bewusst **nicht** angelegt.
 
 ## Offene technische Entscheidungen
 
-- Konkrete Monorepo-Tooling-Wahl innerhalb des mit
-  [ADR 0003](adr/0003-monorepo-vs-polyrepo.md) bereits entschiedenen
-  Monorepos (z. B. Turborepo, Nx, npm/pnpm-Workspaces) — die grundsätzliche
-  Monorepo-vs.-Polyrepo-Frage selbst ist nicht mehr offen.
 - Test-Framework(s) für Web/Mobile/API und CI-Provider sind mit
   [ADR 0005](adr/0005-test-framework.md) (Jest, einheitlich für alle drei
   Apps) und [ADR 0006](adr/0006-github-actions-als-ci-provider.md) (GitHub
-  Actions, eine Pipeline für das Monorepo) entschieden. Weiterhin offen und
-  bewusst nicht Teil dieser beiden ADRs: konkrete Workflow-YAML-Struktur,
-  Coverage-Schwellen, Transpiler-/Preset-Details (`ts-jest`/`@swc/jest`/
-  `jest-expo`), ein browserbasiertes E2E-Test-Framework für `apps/web`
-  (z. B. Playwright/Cypress), konkretes Secret-Scanning-Tool,
+  Actions, eine Pipeline für das Monorepo) entschieden. Die konkrete
+  Monorepo-Tooling-Wahl (npm-Workspaces, kein Turborepo/Nx vorerst) ist
+  mit [ADR 0007](adr/0007-npm-workspaces-als-monorepo-tooling.md) ebenfalls
+  entschieden. Weiterhin offen und bewusst nicht Teil dieser ADRs: konkrete
+  Workflow-YAML-Struktur, Coverage-Schwellen, Transpiler-/Preset-Details
+  (`ts-jest`/`@swc/jest`/`jest-expo`), ein browserbasiertes E2E-Test-Framework
+  für `apps/web` (z. B. Playwright/Cypress), konkretes Secret-Scanning-Tool,
   selbstgehostete vs. GitHub-gehostete Runner (relevant, falls künftig ein
-  CI-Test gegen eine interne ERP-/Lobster-Sandbox nötig wird) sowie
+  CI-Test gegen eine interne ERP-/Lobster-Sandbox nötig wird),
   Deployment-/CD-Ziele (reines CI-Scope, keine Aussage zu Rollout-
-  Mechanismen).
+  Mechanismen) sowie ein möglicher künftiger Task-Graph-/Caching-Layer
+  (Turborepo/Nx) auf Basis der in ADR 0007 gewählten npm-Workspaces, falls
+  reale Build-/Testzeit-Engpässe auftreten.
 - Feindetails des Authentifizierungsmechanismus für Lieferanten: IdP-Wahl
   (ZITADEL Cloud), Grundmodell (tokenbasiert, JWT-Verifikation gegen JWKS)
   und Mandantenmodell (eine ZITADEL Organization pro Lieferant) sind mit
