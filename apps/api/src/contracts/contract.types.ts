@@ -1,24 +1,25 @@
 /**
- * PROTOTYP / KONTURWURF — kein lauffähiger Code.
- *
  * Zweck: sichtbar machen, welchen Datenkontrakt `apps/api` gemäß
  * ADR 0001 ("Lobster-Kontraktdaten: Systemgrenze, Datenkontrakt und
- * Sync-Status") erwartet bzw. an `apps/web` ausliefert.
+ * Sync-Status") erwartet bzw. an `apps/web` ausliefert, sowie den
+ * verifizierten Auth-Kontext, den `AuthGuardService` gemäß ADR 0004/ADR 0008
+ * aufbaut (`AuthenticatedSupplierContext`).
  *
  * Was fehlt bewusst (siehe Implementierungsnotiz in
  * docs/backlog/lieferant-kontrakte-einsehen.md):
- * - Kein NestJS-Projekt/Build (noch keine Tooling-Entscheidung laut
- *   docs/architecture/overview.md, "Offene technische Entscheidungen").
  * - Keine echte Persistenz (DB/ORM) für `Contract` / `ContractSyncRun`.
  * - Kein Ingestion-Adapter Lobster -> apps/api (Transportmechanismus
  *   laut ADR 0001 Punkt 4 explizit offen).
- * - Kein Auth-Mechanismus, der `AuthenticatedSupplierContext` befüllt
- *   (siehe ADR 0002, offene Annahme).
  *
  * Story: docs/backlog/lieferant-kontrakte-einsehen.md
+ *        docs/backlog/lieferanten-anmeldung-gpa.md
  * ADRs:  docs/architecture/adr/0001-lobster-kontrakt-datenkontrakt-und-sync-status.md
  *        docs/architecture/adr/0002-mandantentrennung-kontrakte.md
+ *        docs/architecture/adr/0004-zitadel-oidc-authentifizierung.md
+ *        docs/architecture/adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md
  */
+
+import type { SupplierUserType } from '../auth/user-type';
 
 /** Vereinbarte Liefermenge inkl. Einheit (ADR 0001 Punkt 2). */
 export interface Quantity {
@@ -132,10 +133,32 @@ export interface ContractDetailResponse extends ContractListItem, ContractSyncMe
 
 /**
  * Verifizierter Auth-Kontext, aus dem laut ADR 0002 Punkt 1 die
- * `supplierId` ausschließlich abgeleitet werden darf. Wie dieser
- * Kontext technisch entsteht (Token/Session, IdP), ist laut
- * `docs/architecture/overview.md` noch nicht entschieden.
+ * `supplierId` ausschließlich abgeleitet werden darf. Aufgebaut wird er
+ * durch `AuthGuardService` (`../auth/auth-guard.service.ts`) aus einem
+ * kryptographisch geprüften ZITADEL-Token (ADR 0004).
+ *
+ * Seit [ADR 0008](../../../../docs/architecture/adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)
+ * gilt fachlich verbindlich: `supplierId` IST die Geschäftspartnernummer
+ * (GPA) — nicht mehr die zuvor angenommene ERP-eigene Lieferantenkennung.
+ * Der in ADR 0004 Punkt 3 als Konturwurf-Annahme markierte 1:1-Kurzschluss
+ * `supplierId === organizationId` ist damit fachlich präzisiert zu
+ * `supplierId === GPA` (die ZITADEL-Organization-ID kann technisch weiterhin
+ * mit der GPA identisch sein oder sie als Metadatum tragen — siehe ADR 0008
+ * Entscheidung Punkt 1 und `docs/domain-glossar.md`, Eintrag
+ * "GPA / Geschäftspartnernummer").
  */
 export interface AuthenticatedSupplierContext {
   supplierId: string;
+  /**
+   * Nutzertyp der aktuellen Anmeldung (ADR 0008 Entscheidung Punkt 2: z. B.
+   * Lieferant, Gastbenutzer, Spedition, Steuerberater).
+   *
+   * WICHTIG: Dieses Feld hat AUSDRÜCKLICH KEINE Autorisierungswirkung.
+   * Guard-/Repository-Filter-Logik (ADR 0002) scoped weiterhin
+   * ausschließlich nach `supplierId` (GPA) — `userType` wird nur
+   * transportiert, nie ausgewertet, um Zugriffsentscheidungen zu treffen.
+   * `undefined`, wenn das Token keinen (bekannten) Nutzertyp-Claim enthält
+   * — das ist bewusst KEIN Fehlerfall (anders als eine fehlende GPA).
+   */
+  userType?: SupplierUserType;
 }

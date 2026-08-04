@@ -32,6 +32,7 @@ import {
   type TokenVerificationFailureReason,
   type TokenVerifier,
 } from './token-verifier.interface';
+import { parseSupplierUserType } from './user-type';
 import type { RawZitadelTokenPayload, VerifiedTokenClaims } from './zitadel-token.types';
 
 export class JoseTokenVerifier implements TokenVerifier {
@@ -68,6 +69,7 @@ export class JoseTokenVerifier implements TokenVerifier {
   }
 
   private toVerifiedClaims(payload: RawZitadelTokenPayload): VerifiedTokenClaims {
+    // ADR 0008: dieser Organization-Claim trägt fachlich die GPA.
     const organizationId =
       payload.org_id ?? payload['urn:zitadel:iam:user:resourceowner:id'] ?? null;
 
@@ -79,6 +81,10 @@ export class JoseTokenVerifier implements TokenVerifier {
       issuedAt: payload.iat,
       email: payload.email,
       organizationId,
+      // ADR 0008 Entscheidung Punkt 2: nur transportiert, keine
+      // Autorisierungswirkung. Unbekannter/fehlender Claim -> null, kein
+      // Fehlerfall.
+      userType: parseSupplierUserType(payload.user_type),
     };
   }
 }

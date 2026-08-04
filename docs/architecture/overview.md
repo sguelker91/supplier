@@ -97,44 +97,89 @@ dokumentierte Abweichung, die ADR 0005 ("Jest einheitlich als
 Test-Framework/-API") nicht verletzt, da keine identische Versionsnummer
 gefordert ist.
 
+Ausgelöst durch die Story "Lieferanten-Anmeldung mit Geschäftspartnernummer
+(GPA) und Okta-MFA" erweitert [ADR 0008](adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)
+das Modell aus ADR 0004, ohne es zu ersetzen: Die **GPA (SAP-Geschäftspartner-
+nummer)** wird der fachliche Mandanten-Schlüssel, der als `supplierId` im
+verifizierten `AuthenticatedSupplierContext` geführt wird (statt der bisher
+angenommenen ERP-eigenen Kennung); pro GPA/ZITADEL-Organization können künftig
+**mehrere Anmeldungen** unterschiedlichen Nutzertyps (Lieferant, Gastbenutzer,
+Spedition, Steuerberater) existieren, wobei der Nutzertyp als zusätzliches
+Claim/Attribut im Auth-Kontext mitgeführt, aber bewusst **nicht** für
+Autorisierung ausgewertet wird. Es ist zudem entschieden, dass **Okta** als
+externer Identity Provider via Identity Brokering in ZITADEL eingebunden
+wird (Okta führt Login+MFA durch, ZITADEL bleibt alleiniger Token-Aussteller
+für `apps/api`/`apps/web`/`apps/mobile`), und dass es im Extranet keinerlei
+Self-Signup gibt. Okta tritt damit als zweiter externer Auftragsverarbeiter
+neben ZITADEL Cloud hinzu, mit denselben harten Datenresidenz-/AVV-
+Voraussetzungen vor Produktivbetrieb. Offen und als Risiko dokumentiert
+bleibt der Abgleich zwischen der GPA-basierten `supplierId` und der
+bisherigen ERP-Kennung (`supplierExternalId`) an der Lobster-Kontrakt-Grenze
+aus ADR 0001.
+
 ## Bekannte Systemgrenzen
 
 - **ERP-System**: führendes System für Stammdaten, Kontrakte, Belege.
   Integrationsdetails größtenteils offen; für Kontrakte legt
   [ADR 0001](adr/0001-lobster-kontrakt-datenkontrakt-und-sync-status.md)
   den von `apps/api` erwarteten Datenkontrakt fest (nicht die
-  ERP-interne Funktionsweise).
+  ERP-interne Funktionsweise). Aktuell bezeichnet dieser Begriff SAP als
+  konkretes System; SAP vergibt die GPA, die seit
+  [ADR 0008](adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)
+  der primäre Mandanten-Schlüssel im Extranet ist (siehe auch
+  Domain-Glossar).
 - **Lobster**: EDI-/Integrations-Middleware zwischen ERP und Extranet.
   [ADR 0001](adr/0001-lobster-kontrakt-datenkontrakt-und-sync-status.md)
   definiert für Kontraktdaten, welche Felder und Sync-Metadaten die
   Grenze überqueren müssen. Das konkrete Transportmuster (z. B.
   REST-Wrapper, Datei-Export/Import, Webhooks) ist weiterhin offen und
-  muss vor Umsetzung eines Ingestion-Adapters geklärt werden.
+  muss vor Umsetzung eines Ingestion-Adapters geklärt werden. Offen ist
+  außerdem, wie das dort definierte Feld `supplierExternalId` mit der
+  neuen GPA-basierten `supplierId` (ADR 0008) in Einklang gebracht wird.
 - **ZITADEL Cloud**: externer OIDC-Identity-Provider für die
-  Lieferanten-Authentifizierung ([ADR 0004](adr/0004-zitadel-oidc-authentifizierung.md)).
+  Lieferanten-Authentifizierung ([ADR 0004](adr/0004-zitadel-oidc-authentifizierung.md),
+  präzisiert durch [ADR 0008](adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)).
   `apps/api` überquert diese Grenze ausschließlich lesend zur
   JWT-Signaturprüfung (JWKS-Endpoint); Lieferanten-Identitätsdaten
-  (Nutzer-Stammdaten, Organisationszugehörigkeit) werden bei ZITADEL Cloud
-  gehalten. Datenresidenz/AVV sind vor Produktivbetrieb zwingend zu klären
-  (siehe ADR 0004, Datenklassifizierung). In CI wird diese Grenze bewusst
-  **nicht** überquert (siehe [ADR 0006](adr/0006-github-actions-als-ci-provider.md),
-  Punkt 3): Auth-Tests laufen gegen eine Test-Implementierung des
+  (Nutzer-Stammdaten, GPA-Organisationszugehörigkeit, Nutzertyp) werden bei
+  ZITADEL Cloud gehalten. Datenresidenz/AVV sind vor Produktivbetrieb
+  zwingend zu klären (siehe ADR 0004, Datenklassifizierung). In CI wird
+  diese Grenze bewusst **nicht** überquert (siehe
+  [ADR 0006](adr/0006-github-actions-als-ci-provider.md), Punkt 3):
+  Auth-Tests laufen gegen eine Test-Implementierung des
   `TokenVerifier`-Interfaces, nicht gegen die echte ZITADEL-Cloud-Instanz.
+- **Okta**: externer MFA-/Identity-Provider, seit
+  [ADR 0008](adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)
+  via Identity Brokering als externer IdP in ZITADEL eingebunden. Okta
+  führt Zugangsdaten-Prüfung und MFA durch; `apps/api` kontaktiert Okta zu
+  keinem Zeitpunkt direkt und verifiziert ausschließlich ZITADEL-Token.
+  Okta ist damit ein zweiter externer Auftragsverarbeiter für
+  Lieferanten-Identitätsdaten, mit denselben harten
+  Datenresidenz-/AVV-Voraussetzungen vor Produktivbetrieb wie ZITADEL
+  Cloud (siehe ADR 0008, Datenklassifizierung). Das konkrete
+  Föderationsprotokoll (OIDC vs. SAML) zu Okta ist offen.
 
 ## Zukünftige Anforderungen (noch nicht im Scope)
 
-- **Gastbenutzer je Lieferant**: Lieferanten sollen künftig eigene
-  "Gastbenutzer" anlegen können, z. B. für Steuerberater, Speditionen oder
-  eigene Mitarbeiter, die im Auftrag des Lieferanten auf das Extranet
-  zugreifen. Noch nicht als Backlog-Story ausgearbeitet — hier nur als
-  Anforderung vorgemerkt, damit sie bei künftigen Architekturentscheidungen
-  mitgedacht wird. Direkter Bezug zu [ADR 0004](adr/0004-zitadel-oidc-authentifizierung.md):
-  Das dort gewählte Modell "eine ZITADEL Organization pro Lieferant"
-  unterstützt grundsätzlich mehrere Nutzer je Organization, was für
-  Gastbenutzer mit eingeschränkten Rollen/Rechten passend erscheint — die
-  konkrete Rollen-/Rechte-Ausgestaltung (z. B. welche Belege/Kontrakte ein
-  Gastbenutzer sehen darf) ist jedoch nicht entschieden und erfordert eine
-  eigene Story/ADR, sobald sie priorisiert wird.
+- **Berechtigungs-/Sichtbarkeitsmatrix je Nutzertyp**: Seit
+  [ADR 0008](adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)
+  ist die technische Grundlage gelegt, dass eine GPA mehrere Anmeldungen
+  unterschiedlichen Nutzertyps (Lieferant, Gastbenutzer, Spedition,
+  Steuerberater) haben kann und dieser Nutzertyp im Auth-Kontext bekannt
+  ist. **Nicht** entschieden ist, ob und wie sich die Sichtbarkeit von
+  Daten (insbesondere Belege wie Steuerbescheid, Prämien, Gutschriften,
+  sowie Kontrakte) zwischen diesen Nutzertypen unterscheidet — das
+  bisherige, unveränderte Guard-/Repository-Filter-Muster aus ADR 0002
+  behandelt alle Anmeldungen einer GPA gleich. Erfordert eine eigene
+  Folge-Story/ADR von Architect/Security, sobald priorisiert.
+- **Mehrere GPA pro Anmeldung** (z. B. ein Steuerberater mit mehreren
+  Mandanten): laut ADR 0008 explizit nicht abgedeckt; ein
+  Mandanten-Wechsel-Mechanismus wäre eine grundlegend andere Erweiterung
+  des heutigen Modells (eine Organization-Zugehörigkeit pro Token).
+- **Provisionierung von Anmeldungen** (Anlegen/Deaktivieren einer Anmeldung
+  zu einer GPA in ZITADEL/Okta) sowie die **Migration** bestehender
+  Lieferanten-Konten von der alten ERP-Kennung auf die GPA sind weiterhin
+  nicht spezifiziert (siehe ADR 0008, Offene Annahmen).
 
 ## Offene technische Entscheidungen
 
@@ -156,17 +201,26 @@ gefordert ist.
   reale Build-/Testzeit-Engpässe auftreten.
 - Feindetails des Authentifizierungsmechanismus für Lieferanten: IdP-Wahl
   (ZITADEL Cloud), Grundmodell (tokenbasiert, JWT-Verifikation gegen JWKS)
-  und Mandantenmodell (eine ZITADEL Organization pro Lieferant) sind mit
-  [ADR 0004](adr/0004-zitadel-oidc-authentifizierung.md) entschieden. Weiterhin
+  und Mandantenmodell (eine ZITADEL Organization pro GPA) sind mit
+  [ADR 0004](adr/0004-zitadel-oidc-authentifizierung.md) und
+  [ADR 0008](adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md)
+  entschieden; ebenso, dass die GPA der Mandanten-Schlüssel ist, dass eine
+  GPA mehrere Anmeldungen unterschiedlichen Nutzertyps haben kann und dass
+  Okta via Identity Brokering in ZITADEL für MFA eingebunden wird. Weiterhin
   offen: konkrete Token-Lebensdauer und Refresh-Strategie (inkl.
   Web- vs. Mobile-spezifischer Unterschiede), exakte
   ZITADEL-Projekt-/Applikationskonfiguration (Redirect-URIs,
-  Scopes/Claims), das Mapping ZITADEL-Organization-ID ↔ interne
-  `supplierId` sowie der Lieferanten-Onboarding-Prozess in ZITADEL, und
-  die vor Produktivbetrieb zwingende Klärung von Datenresidenz/AVV mit
-  ZITADEL. Der Autorisierungs-/Mandantentrennungs-**Teil** (wie ein
-  bereits authentifizierter Lieferant serverseitig auf eigene Ressourcen
+  Scopes/Claims, exakter GPA-/`userType`-Claim-Name), der
+  Lieferanten-/Anmeldungs-Onboarding-Prozess in ZITADEL/Okta, das
+  Föderationsprotokoll (OIDC vs. SAML) zwischen ZITADEL und Okta, das
+  Mapping zwischen der bisherigen ERP-Kennung (`supplierExternalId`,
+  ADR 0001) und der GPA-basierten `supplierId`, ein Audit-Logging-Konzept
+  für Login-/MFA-Ereignisse, sowie die vor Produktivbetrieb zwingende
+  Klärung von Datenresidenz/AVV mit **sowohl** ZITADEL **als auch** Okta.
+  Der Autorisierungs-/Mandantentrennungs-**Teil** (wie ein bereits
+  authentifizierter Nutzer serverseitig auf die Ressourcen seiner GPA
   beschränkt wird) bleibt unverändert in [ADR 0002](adr/0002-mandantentrennung-kontrakte.md)
-  entschieden.
+  entschieden; eine Differenzierung dieses Zugriffs nach Nutzertyp ist
+  weiterhin **nicht** entschieden (siehe "Zukünftige Anforderungen").
 - Konkreter Transportmechanismus Lobster → `apps/api` für den
   Kontrakt-Ingestion-Adapter (siehe ADR 0001, offene Annahme).
