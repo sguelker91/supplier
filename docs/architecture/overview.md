@@ -17,6 +17,16 @@ ERP/Lobster. Für lieferantenscoped Ressourcen (aktuell: Kontrakte) ist das
 serverseitige Autorisierungsmuster (Guard + Repository-Filter anhand einer
 verifizierten `supplierId`, keine Supplier-ID im Client-Input) entschieden.
 
+Zusätzlich ist die bislang nur implizit angenommene Repository-Struktur nun
+explizit begründet entschieden: [ADR 0003](adr/0003-monorepo-vs-polyrepo.md)
+bestätigt ein **Monorepo** (`apps/web`, `apps/mobile`, `apps/api`, `docs/`,
+`.claude/` in einem Repository) gegenüber Polyrepo, hauptsächlich wegen
+geteilter TypeScript-Contracts zwischen `apps/api` und den Frontends,
+atomarer Cross-App-Änderungen und der Agenten-Pipeline, die auf relative
+Dateipfade innerhalb eines Repos angewiesen ist. Die konkrete
+Monorepo-*Tooling*-Wahl (Turborepo/Nx/Workspaces) bleibt davon unabhängig
+offen.
+
 ## Bekannte Systemgrenzen
 
 - **ERP-System**: führendes System für Stammdaten, Kontrakte, Belege.
@@ -33,7 +43,10 @@ verifizierten `supplierId`, keine Supplier-ID im Client-Input) entschieden.
 
 ## Offene technische Entscheidungen
 
-- Monorepo-Tooling (z. B. Turborepo, Nx, npm/pnpm-Workspaces)
+- Konkrete Monorepo-Tooling-Wahl innerhalb des mit
+  [ADR 0003](adr/0003-monorepo-vs-polyrepo.md) bereits entschiedenen
+  Monorepos (z. B. Turborepo, Nx, npm/pnpm-Workspaces) — die grundsätzliche
+  Monorepo-vs.-Polyrepo-Frage selbst ist nicht mehr offen.
 - Test-Framework(s) für Web/Mobile/API
 - CI-Provider
 - Konkreter Authentifizierungsmechanismus für Lieferanten (Login-Flow,
