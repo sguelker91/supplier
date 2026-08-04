@@ -12,14 +12,22 @@ Verbindliche Fachterminologie: siehe [`docs/domain-glossar.md`](docs/domain-glos
 
 ## Stand des Projekts
 
-Dieses Repository befindet sich aktuell in der **Harness-Aufbauphase**: Es
-existiert noch keine lauffähige Anwendung, sondern ein Team aus 8
-spezialisierten Claude-Code-Subagenten, das die weitere Entwicklung
-strukturiert durchführt (Product Owner, Architect, Developer, QA, Security,
-DevOps, Documentation, Orchestrator). Ein erster End-to-End-Testlauf der
-Pipeline liegt bereits vor (Slug `lieferant-kontrakte-einsehen`, siehe
-[`docs/workflow/`](docs/workflow/)) und zeigt exemplarisch, wie die Rollen
-zusammenarbeiten.
+Neben der Fachlogik betreibt dieses Repository ein Team aus 8 spezialisierten
+Claude-Code-Subagenten, das die weitere Entwicklung strukturiert durchführt
+(Product Owner, Architect, Developer, QA, Security, DevOps, Documentation,
+Orchestrator). Seit dem Monorepo-Bootstrap ist das Repository ein echtes,
+installierbares npm-Projekt mit lauffähigen (wenn auch noch frühen)
+Grundgerüsten für alle drei Apps — kein reiner Konturwurf mehr:
+
+```
+npm install
+npm run typecheck --workspaces
+npm test --workspaces
+```
+
+Ein erster End-to-End-Testlauf der Agenten-Pipeline liegt ebenfalls vor
+(Slug `lieferant-kontrakte-einsehen`, siehe [`docs/workflow/`](docs/workflow/))
+und zeigt exemplarisch, wie die Rollen zusammenarbeiten.
 
 ## Tech-Stack
 
@@ -31,10 +39,17 @@ Durchgängig TypeScript:
 
 Monorepo-Layout unter `apps/` (siehe
 [ADR 0003](docs/architecture/adr/0003-monorepo-vs-polyrepo.md)): Web, Mobile
-und API bleiben dauerhaft in einem Repository. Die konkrete
-Monorepo-*Tooling*-Wahl (z. B. Turborepo/Nx/npm-Workspaces), Test-Framework,
-CI-Provider und der Authentifizierungsmechanismus für Lieferanten sind davon
-unabhängig noch nicht final entschieden — siehe
+und API bleiben dauerhaft in einem Repository. Monorepo-Tooling, Test-Framework
+und CI-Provider sind entschieden: npm-Workspaces, kein Turborepo/Nx
+([ADR 0007](docs/architecture/adr/0007-npm-workspaces-als-monorepo-tooling.md)),
+Jest einheitlich für alle drei Apps
+([ADR 0005](docs/architecture/adr/0005-test-framework.md)), GitHub Actions
+mit einer Pipeline fürs Monorepo
+([ADR 0006](docs/architecture/adr/0006-github-actions-als-ci-provider.md)).
+Der Authentifizierungsmechanismus für Lieferanten (ZITADEL Cloud, OIDC) ist
+in seinen Grundzügen ebenfalls entschieden
+([ADR 0004](docs/architecture/adr/0004-zitadel-oidc-authentifizierung.md)),
+Feindetails bleiben offen — siehe
 [`docs/architecture/overview.md`](docs/architecture/overview.md), Abschnitt
 "Offene technische Entscheidungen".
 
