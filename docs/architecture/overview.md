@@ -42,6 +42,22 @@ Produktivbetrieb zwingend die Klärung von Datenresidenz (EU-Region bei
 ZITADEL Cloud) und ein Auftragsverarbeitungsvertrag — als harte, in der ADR
 dokumentierte Voraussetzung, nicht als getroffene Entscheidung.
 
+Zwei der bislang offenen Werkzeug-Grundsatzfragen sind nun ebenfalls
+entschieden: [ADR 0005](adr/0005-test-framework.md) legt **Jest** als
+einheitliches Test-Framework für `apps/api`, `apps/web` **und**
+`apps/mobile` fest (statt unterschiedlicher Runner je App), vor allem weil
+Expo/React Native de facto auf Jest angewiesen ist und ein einheitlicher
+Runner die Monorepo-Konsistenz aus ADR 0003 stützt.
+[ADR 0006](adr/0006-github-actions-als-ci-provider.md) legt **GitHub
+Actions** als CI-Provider fest (das Repository liegt bereits auf GitHub)
+mit **einer** logischen Pipeline für das gesamte Monorepo statt getrennter
+CI-Systeme je App, und entscheidet zusätzlich, dass CI-Auth-Tests gegen
+eine Test-Implementierung des in ADR 0004 definierten
+`TokenVerifier`-Interfaces laufen, nicht gegen die echte ZITADEL-Cloud-
+Instanz. Beide ADRs treffen ausschließlich die Grundsatzentscheidung;
+konkrete Workflow-Dateien, Test-Setup-Code, Coverage-Schwellen und
+Deployment-/CD-Ziele wurden bewusst **nicht** angelegt.
+
 ## Bekannte Systemgrenzen
 
 - **ERP-System**: führendes System für Stammdaten, Kontrakte, Belege.
@@ -61,7 +77,10 @@ dokumentierte Voraussetzung, nicht als getroffene Entscheidung.
   JWT-Signaturprüfung (JWKS-Endpoint); Lieferanten-Identitätsdaten
   (Nutzer-Stammdaten, Organisationszugehörigkeit) werden bei ZITADEL Cloud
   gehalten. Datenresidenz/AVV sind vor Produktivbetrieb zwingend zu klären
-  (siehe ADR 0004, Datenklassifizierung).
+  (siehe ADR 0004, Datenklassifizierung). In CI wird diese Grenze bewusst
+  **nicht** überquert (siehe [ADR 0006](adr/0006-github-actions-als-ci-provider.md),
+  Punkt 3): Auth-Tests laufen gegen eine Test-Implementierung des
+  `TokenVerifier`-Interfaces, nicht gegen die echte ZITADEL-Cloud-Instanz.
 
 ## Zukünftige Anforderungen (noch nicht im Scope)
 
@@ -84,8 +103,18 @@ dokumentierte Voraussetzung, nicht als getroffene Entscheidung.
   [ADR 0003](adr/0003-monorepo-vs-polyrepo.md) bereits entschiedenen
   Monorepos (z. B. Turborepo, Nx, npm/pnpm-Workspaces) — die grundsätzliche
   Monorepo-vs.-Polyrepo-Frage selbst ist nicht mehr offen.
-- Test-Framework(s) für Web/Mobile/API
-- CI-Provider
+- Test-Framework(s) für Web/Mobile/API und CI-Provider sind mit
+  [ADR 0005](adr/0005-test-framework.md) (Jest, einheitlich für alle drei
+  Apps) und [ADR 0006](adr/0006-github-actions-als-ci-provider.md) (GitHub
+  Actions, eine Pipeline für das Monorepo) entschieden. Weiterhin offen und
+  bewusst nicht Teil dieser beiden ADRs: konkrete Workflow-YAML-Struktur,
+  Coverage-Schwellen, Transpiler-/Preset-Details (`ts-jest`/`@swc/jest`/
+  `jest-expo`), ein browserbasiertes E2E-Test-Framework für `apps/web`
+  (z. B. Playwright/Cypress), konkretes Secret-Scanning-Tool,
+  selbstgehostete vs. GitHub-gehostete Runner (relevant, falls künftig ein
+  CI-Test gegen eine interne ERP-/Lobster-Sandbox nötig wird) sowie
+  Deployment-/CD-Ziele (reines CI-Scope, keine Aussage zu Rollout-
+  Mechanismen).
 - Feindetails des Authentifizierungsmechanismus für Lieferanten: IdP-Wahl
   (ZITADEL Cloud), Grundmodell (tokenbasiert, JWT-Verifikation gegen JWKS)
   und Mandantenmodell (eine ZITADEL Organization pro Lieferant) sind mit
