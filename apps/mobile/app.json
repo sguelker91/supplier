@@ -9,7 +9,10 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.PLACEHOLDER.supplierextranet"
+      "bundleIdentifier": "com.PLACEHOLDER.supplierextranet",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.PLACEHOLDER.supplierextranet"
