@@ -15,6 +15,13 @@ import { useState } from 'react';
 import type { AuthenticationSession } from './auth-client';
 import { useAuth, ZitadelAuthProvider } from './ZitadelAuthProvider';
 
+// CI-Runner sind teils spürbar langsamer als die lokale Entwicklungsumgebung
+// (beobachtet: Jests Default-Timeout von 5000ms reichte lokal immer, schlug
+// in GitHub Actions aber vereinzelt fehl) -- die gemockten Promises lösen
+// sofort auf, hier geht es nur um Puffer für den CI-Runner, nicht um eine
+// tatsächlich lang laufende Operation.
+jest.setTimeout(10000);
+
 const mockUseAutoDiscovery = jest.fn();
 const mockUseAuthRequest = jest.fn();
 const mockPromptAsync = jest.fn();
