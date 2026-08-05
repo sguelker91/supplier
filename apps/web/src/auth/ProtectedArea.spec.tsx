@@ -49,11 +49,12 @@ describe('ProtectedArea (AC7)', () => {
     expect(screen.queryByText(PROTECTED_CONTENT_TEXT)).not.toBeInTheDocument();
   });
 
-  it('zeigt einen Fehlerhinweis statt geschützter Inhalte, wenn die Anmeldeprüfung fehlschlägt', () => {
+  it('zeigt einen Fehlerhinweis UND die Anmeldeseite (mit Retry-Möglichkeit), wenn die Anmeldeprüfung fehlschlägt', () => {
     useAuthMock.mockReturnValue({
       isLoading: false,
       isAuthenticated: false,
       error: new Error('synthetic-protected-area-error'),
+      signinRedirect: jest.fn(),
     });
 
     render(
@@ -63,6 +64,10 @@ describe('ProtectedArea (AC7)', () => {
     );
 
     expect(screen.getByRole('alert')).toHaveTextContent('synthetic-protected-area-error');
+    // Kein Sackgassen-Zustand: die Anmeldeseite mit "Anmelden"-Button
+    // bleibt trotz Fehler sichtbar, damit ein Retry ohne Neuladen der
+    // Seite möglich ist.
+    expect(screen.getByRole('button', { name: 'Anmelden' })).toBeInTheDocument();
     expect(screen.queryByText(PROTECTED_CONTENT_TEXT)).not.toBeInTheDocument();
   });
 

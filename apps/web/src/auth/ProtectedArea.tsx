@@ -30,14 +30,19 @@ export function ProtectedArea(props: { children: ReactNode }) {
     return <p role="status">Anmeldestatus wird geprüft…</p>;
   }
 
-  if (auth.error) {
-    return <p role="alert">{auth.error.message}</p>;
-  }
-
   if (!auth.isAuthenticated) {
     // AC7: nicht angemeldet / Token abgelaufen -> Anmeldeseite statt
-    // geschützter Inhalte, keine Daten werden ausgeliefert.
-    return <LoginPage />;
+    // geschützter Inhalte, keine Daten werden ausgeliefert. Ein
+    // `auth.error` (z. B. gescheiterte Discovery/Silent-Renew) wird
+    // zusätzlich zur Anmeldeseite angezeigt statt sie zu ersetzen --
+    // sonst hätte der Nutzer nach einem fehlgeschlagenen Redirect keinen
+    // Retry-Pfad außer einem manuellen Neuladen der Seite.
+    return (
+      <>
+        {auth.error ? <p role="alert">{auth.error.message}</p> : null}
+        <LoginPage />
+      </>
+    );
   }
 
   return <>{props.children}</>;
