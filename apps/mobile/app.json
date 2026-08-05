@@ -7,9 +7,17 @@
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.PLACEHOLDER.supplierextranet"
     },
-    "android": {},
-    "web": {}
+    "android": {
+      "package": "com.PLACEHOLDER.supplierextranet"
+    },
+    "web": {},
+    "extra": {
+      "eas": {
+        "projectId": "c3c489bc-ef30-4e16-85af-00d0753d323d"
+      }
+    }
   }
 }

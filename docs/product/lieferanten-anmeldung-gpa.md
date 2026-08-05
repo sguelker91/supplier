@@ -1,22 +1,22 @@
 # Lieferanten-Anmeldung mit Geschäftspartnernummer (GPA) und Okta-MFA
 
 > **Hinweis zum Reifegrad:** Diese Funktion ist aktuell **funktional
-> unvollständig und nicht produktiv nutzbar**. Es gibt heute **keinen
-> echten, funktionierenden Login**: Der Klick auf "Anmelden" führt in
-> `apps/web` bewusst und sichtbar zu einem Fehler, da noch kein
-> OIDC-Client-SDK integriert ist; `apps/mobile` hat überhaupt keine
-> Login-Oberfläche; es gibt weder eine Weiterleitung zur Anmeldeseite bei
-> fehlender Anmeldung noch einen Logout. QA hat den Stand mit
-> **"Freigegeben mit Auflagen"** bewertet — eng begrenzt auf den
-> tatsächlich umgesetzten Teil-Scope (`apps/api`-Datenmodell,
-> `apps/web`-Login-Einstiegspunkt ohne Registrierung); zentrale
-> Akzeptanzkriterien der User Story (AC1, AC7, AC8, AC9 — erfolgreicher
-> Login, Weiterleitung, MFA-Gleichbehandlung Web/Mobile, Logout) sind
-> **funktional nicht erfüllt**. Security bewertet das Gesamt-Feature als
-> **"Blockiert für einen Produktivbetrieb"**, u. a. wegen einer
-> ungeprüften ZITADEL↔Okta-Föderations-Vertrauenskette und eines fehlenden
-> AVV/Datenresidenz-Nachweises für Okta. Die folgende Beschreibung zeigt,
-> was die Funktion **künftig können soll**, nicht den heutigen Zustand.
+> unvollständig und nicht produktiv nutzbar**. **Update (siehe Changelog
+> unten):** `apps/web` hat inzwischen einen echten, funktionierenden
+> Login/Logout (Authorization Code Flow mit PKCE gegen die reale ZITADEL-
+> Instanz, Redirect zur Anmeldeseite bei fehlender Anmeldung, aktive
+> Abmeldung). `apps/mobile` hat weiterhin **keine** Login-Oberfläche. Die
+> Bewertungen von QA (**"Freigegeben mit Auflagen"**, eng begrenzt auf den
+> damals umgesetzten Teil-Scope) und Security (**"Blockiert für einen
+> Produktivbetrieb"**, u. a. wegen einer ungeprüften ZITADEL↔Okta-
+> Föderations-Vertrauenskette und eines fehlenden AVV/Datenresidenz-
+> Nachweises für Okta) beziehen sich auf den Stand **vor** dieser
+> Web-Änderung und wurden noch nicht erneut durchgeführt — sie sind daher
+> nicht automatisch auf den neuen Stand übertragbar, insbesondere nicht
+> auf AC8 (weiterhin kein Mobile-Login, damit keine Gleichbehandlung
+> möglich). Die folgende Beschreibung zeigt, was die Funktion **künftig
+> können soll**; der tatsächliche Stand ist im Changelog unten
+> dokumentiert.
 
 ## Zweck/Überblick
 
@@ -91,9 +91,11 @@ Web-Einstiegspunkt, kein funktionierender Login):**
   ausschließlich transportiert, nie für Autorisierung ausgewertet.
 - `apps/api/src/contracts/contract.types.ts`: `AuthenticatedSupplierContext`
   mit `supplierId` (= GPA) und optionalem `userType`.
-- `apps/web/src/auth/auth-client.ts` und `LoginPage.tsx`: bewusst
-  fehlschlagender Login-Einstiegspunkt (kein OIDC-SDK integriert);
-  `LoginPage` ist nicht in `App.tsx` verdrahtet.
+- `apps/web/src/auth/zitadel-config.ts`, `auth-client.ts`, `LoginPage.tsx`,
+  `AuthCallbackPage.tsx`, `ProtectedArea.tsx`, `LogoutButton.tsx`: **Update
+  (siehe Changelog):** echter Login-/Logout-Flow via `react-oidc-context`/
+  `oidc-client-ts`, `LoginPage` ist in `App.tsx` verdrahtet und über
+  `ProtectedArea` geschützt.
 - `apps/mobile/src/auth/*`: unverändert, kein Login-Code.
 
 **Architektur-Referenzen** (Details dort, nicht hier dupliziert):
@@ -109,10 +111,14 @@ Web-Einstiegspunkt, kein funktionierender Login):**
 
 ## Bekannte Einschränkungen/offene Punkte
 
-- **Kein funktionierender Login-Flow:** Weder Web noch Mobile ermöglichen
-  aktuell eine echte Anmeldung; es gibt keinen Logout und keine
-  Weiterleitung zur Anmeldeseite bei fehlender/abgelaufener Sitzung
-  (siehe `docs/qa/lieferanten-anmeldung-gpa.md`, AC1/AC7/AC8/AC9).
+- **Kein funktionierender Login-Flow in `apps/mobile`:** `apps/web` hat
+  seit dem Update (siehe Changelog) einen echten Login/Logout inkl.
+  Redirect bei fehlender/abgelaufener Sitzung; `apps/mobile` ermöglicht
+  weiterhin **keine** echte Anmeldung (kein Login-Screen, kein SDK). AC8
+  (Gleichbehandlung Web/Mobile) bleibt damit unerfüllt. Die vorherige
+  QA-/Security-Bewertung (`docs/qa/lieferanten-anmeldung-gpa.md`,
+  `docs/security/lieferanten-anmeldung-gpa.md`) bezieht sich auf den Stand
+  vor diesem Update und wurde noch nicht erneut durchgeführt.
 - **Alle Nutzertypen einer GPA haben identischen Zugriff:** Lieferant,
   Gastbenutzer, Spedition und Steuerberater sehen aktuell dieselben
   lieferantenscoped Daten; es gibt bewusst noch keine
@@ -158,3 +164,28 @@ Web-Einstiegspunkt, kein funktionierender Login):**
   Login-Einstiegspunkt ohne funktionierenden OIDC-Flow in `apps/web`);
   kein Logout, kein Mobile-Login, keine Redirect-Logik. Domain-Glossar um
   "GPA / Geschäftspartnernummer" ergänzt (siehe `docs/domain-glossar.md`).
+- 2026-08-04 (Update): **`apps/web` hat jetzt einen echten Login/Logout.**
+  `apps/web/src/auth/LoginPage.tsx` löst über die bereits als Dependency
+  vorhandenen Bibliotheken `oidc-client-ts`/`react-oidc-context` einen
+  echten Authorization-Code-Flow mit PKCE gegen die reale ZITADEL-Instanz
+  (`https://supplier-janwkz.eu1.zitadel.cloud`) aus -- kein Platzhalter
+  mehr, der immer fehlschlägt. Neu: `AuthCallbackPage.tsx` (Ziel der
+  `redirect_uri`, `/auth/callback`, nimmt den Code-Austausch entgegen),
+  `ProtectedArea.tsx` (AC7: nicht angemeldete Nutzer sehen die
+  Anmeldeseite statt der Kontrakte-Liste) und `LogoutButton.tsx` (AC9:
+  beendet die Sitzung und ruft den ZITADEL End-Session-Endpoint auf).
+  `App.tsx` verdrahtet `LoginPage` jetzt tatsächlich (zuvor bewusst nicht
+  der Fall). Damit sind AC1 (Login), AC7 (Redirect bei fehlender
+  Anmeldung) und AC9 (Logout) für **`apps/web`** funktional umgesetzt --
+  ein echter Login gegen die reale ZITADEL-Instanz wurde in dieser
+  Entwicklungsumgebung mangels Netzwerkzugriff/Testnutzer nicht manuell
+  durchgeführt, alle Tests mocken `react-oidc-context`.
+  **Weiterhin fehlend/unverändert:** `apps/mobile` hat nach wie vor
+  **keinen** Login-Screen und keine SDK-Integration -- AC1/AC7/AC8/AC9
+  bleiben für Mobile vollständig offen, AC8 (Gleichbehandlung Web/Mobile)
+  ist damit weiterhin nicht erfüllbar. Die eigentliche Okta-MFA-
+  Durchsetzung, der Enumeration-Schutz vor MFA (AC2/AC3/AC8) sowie die
+  DSGVO-Voraussetzungen (Okta-AVV/Datenresidenz, siehe Security-Bericht)
+  bleiben unverändert außerhalb des Scopes dieser Web-Änderung. Details:
+  siehe neuer Implementierungsnotiz-Abschnitt in
+  `docs/backlog/lieferanten-anmeldung-gpa.md`.
