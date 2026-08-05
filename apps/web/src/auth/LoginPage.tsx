@@ -30,6 +30,7 @@ import { useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 
 import { loginWithZitadel } from './auth-client';
+import styles from './LoginPage.module.css';
 
 export interface LoginPageProps {
   /**
@@ -65,22 +66,29 @@ export function LoginPage(props: LoginPageProps) {
   }
 
   return (
-    <section>
-      <h1>Anmeldung</h1>
-      <p>
-        Melden Sie sich mit Ihren bestehenden Zugangsdaten am
-        Lieferanten-Extranet an. Im Anschluss ist eine
-        Multi-Faktor-Authentifizierung über Okta erforderlich.
-      </p>
-      {/*
-        AC6: bewusst KEIN Registrierungs-/Sign-up-Link oder -Hinweis --
-        die einzige im Extranet sichtbare Möglichkeit ist die Anmeldung
-        mit bereits bestehenden Zugangsdaten.
-      */}
-      <button type="button" onClick={handleLoginClick}>
-        Anmelden
-      </button>
-      {errorMessage ? <p role="alert">{errorMessage}</p> : null}
-    </section>
+    <main className={styles.page}>
+      <section className={styles.card}>
+        <p className={styles.kicker}>Lieferanten-Extranet</p>
+        <h1 className={styles.heading}>Anmeldung</h1>
+        <p className={styles.description}>
+          Melden Sie sich mit Ihren bestehenden Zugangsdaten am
+          Lieferanten-Extranet an. Im Anschluss ist eine
+          Multi-Faktor-Authentifizierung über Okta erforderlich.
+        </p>
+        {/*
+          AC6: bewusst KEIN Registrierungs-/Sign-up-Link oder -Hinweis --
+          die einzige im Extranet sichtbare Möglichkeit ist die Anmeldung
+          mit bereits bestehenden Zugangsdaten.
+        */}
+        <button type="button" className={styles.button} onClick={handleLoginClick}>
+          Anmelden
+        </button>
+        {errorMessage ? (
+          <p role="alert" className={styles.error}>
+            {errorMessage}
+          </p>
+        ) : null}
+      </section>
+    </main>
   );
 }

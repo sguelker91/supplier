@@ -1,0 +1,105 @@
+/**
+ * Hintergrund: warmer Sonnenuntergang über einem Feld (CSS-Verlauf als
+ * Platzhalter, bis das reale Foto als Datei verfügbar ist). Sobald es
+ * bereitsteht, kann `.page` einfach ein zusätzliches `background-image`
+ * (z. B. `url('/login-background.jpg')`, `background-size: cover`)
+ * bekommen -- der Verlauf bleibt dann als Fallback/Ladezustand.
+ */
+.page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 86% 46%, rgba(255, 246, 219, 0.95) 0%, rgba(255, 205, 130, 0.55) 9%, rgba(255, 170, 90, 0) 30%),
+    linear-gradient(
+      180deg,
+      #6d8fac 0%,
+      #9fb9cc 24%,
+      #d9c2a3 42%,
+      #eeb26e 52%,
+      #c98a4b 58%,
+      #33422a 60%,
+      #1b230f 78%,
+      #10150a 100%
+    );
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 40px 32px;
+  box-shadow: 0 24px 60px rgba(20, 20, 10, 0.35);
+  text-align: center;
+}
+
+.kicker {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b3652b;
+}
+
+.heading {
+  margin: 0 0 16px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #22281c;
+}
+
+.description {
+  margin: 0 0 28px;
+  color: #4b5563;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.button {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #e08a3c, #b85c1f);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(184, 92, 31, 0.35);
+}
+
+.button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.error {
+  margin: 16px 0 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  font-size: 0.875rem;
+}

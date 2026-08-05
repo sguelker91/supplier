@@ -11,5 +11,8 @@ module.exports = {
   },
   testRegex: '.*\\.(spec|test)\\.tsx?$',
   moduleFileExtensions: ['tsx', 'ts', 'jsx', 'js', 'json'],
+  moduleNameMapper: {
+    '\\.module\\.css$': '<rootDir>/src/test-setup/css-module-mock.cjs',
+  },
   setupFilesAfterEnv: ['<rootDir>/src/test-setup/jest.setup.ts'],
 };
