@@ -3,6 +3,7 @@
     "name": "Lieferanten-Extranet",
     "slug": "supplier-extranet-mobile",
     "version": "0.1.0",
+    "scheme": "supplierextranet",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": ["**/*"],

@@ -1,57 +1,52 @@
 /**
- * BEWUSST WEITERHIN PLATZHALTER: kein echtes OIDC-SDK eingebunden. Läuft
- * jetzt als echter TypeScript-Code im Expo-Projekt (`apps/mobile`, siehe
- * `app.json`/`package.json`), aber `loginWithZitadel()` bleibt eine reine
- * Signatur ohne Implementierung.
+ * Login-Einstiegspunkt für `apps/mobile`, jetzt mit echtem OIDC-Login-Flow
+ * (Authorization Code Flow + PKCE gegen ZITADEL Cloud über
+ * `expo-auth-session`, siehe `ZitadelAuthProvider.tsx`/`zitadel-
+ * config.ts`).
  *
- * Zeigt den Ablauf, den laut ADR 0004 Punkt 1/2 ein künftiges echtes SDK
- * für Expo (naheliegender Kandidat: `expo-auth-session`, unterstützt
- * Authorization Code Flow + PKCE für native Apps) kapseln würde, und wie
- * das resultierende Access-Token gemäß ADR 0004 Punkt 2 als
- * `Authorization: Bearer`-Header an Requests gegen `apps/api` angehängt
- * wird — analog zu `apps/web/src/auth/auth-client.ts`, aber mit
- * Mobile-spezifischen Anmerkungen (sichere Token-Ablage, Redirect-Schema).
- *
- * ECHTE IMPLEMENTIERUNG (bewusst NICHT Teil dieses Konturwurfs, siehe
- * ADR 0003 "Offene technische Entscheidungen" — kein Paketmanager/
- * Expo-Dependency-Setup vorhanden):
- * - PKCE Code-Verifier/-Challenge-Erzeugung und Authorization-Request via
- *   `expo-auth-session` (`useAuthRequest`/`AuthSession.exchangeCodeAsync`).
- * - Sichere Token-Ablage z. B. über `expo-secure-store` (Keychain/Keystore)
- *   statt unverschlüsseltem Storage.
- * - Refresh-Token-Strategie auf Mobile ist laut ADR 0004 ("Konsequenzen":
- *   "Refresh-Token-Rotation auf Mobile") ausdrücklich offen.
+ * Analog zu `apps/web/src/auth/auth-client.ts`: dünne Wrapper-Funktionen
+ * um den Auth-Kontext (dort `react-oidc-context`, hier
+ * `ZitadelAuthProvider`s `useAuth()`), damit `LoginScreen`/`LogoutButton`
+ * denselben schlanken Aufrufstil verwenden können.
  *
  * ADR: docs/architecture/adr/0004-zitadel-oidc-authentifizierung.md
+ *      docs/architecture/adr/0008-gpa-mandantenschluessel-mehrfachanmeldung-okta-identity-brokering.md
  */
 
-import type { OidcClientConfig } from './oidc-config.types';
-
-/** Ergebnis eines erfolgreichen Logins, wie es ein echtes OIDC-SDK liefern würde. */
+/** Ergebnis eines erfolgreichen Logins. */
 export interface AuthenticationSession {
   accessToken: string;
   /** Unix-Timestamp (Sekunden), ab dem das Token erneuert werden muss. */
   expiresAt: number;
 }
 
+/** Minimaler Vertrag, den `ZitadelAuthProvider`s `useAuth()`-Rückgabewert erfüllen muss. */
+export interface ZitadelAuthActions {
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
+}
+
 /**
- * PLATZHALTER-SIGNATUR (keine Implementierung): Würde in der echten
- * Umsetzung den Nutzer über den System-Browser/`expo-auth-session` zu
- * ZITADEL umleiten (Authorization Code Flow + PKCE, ADR 0004 Punkt 2) und
- * nach Rückkehr den Autorisierungscode gegen ein Token tauschen. Bewusst
- * als `declare function` markiert, um zu zeigen, dass hier KEIN echtes
- * SDK/keine echte Implementierung existiert.
+ * Löst den Authorization-Code-Flow mit PKCE gegen ZITADEL aus (System-
+ * Browser via `expo-web-browser`). Wirft, wenn der Auth-Kontext das
+ * Login (noch) nicht ausführen kann (z. B. `AuthRequest` noch nicht
+ * geladen) -- kein stiller Fehlschlag.
  */
-export declare function loginWithZitadel(
-  config: OidcClientConfig,
-): Promise<AuthenticationSession>;
+export async function loginWithZitadel(auth: ZitadelAuthActions): Promise<void> {
+  await auth.login();
+}
+
+/** Beendet die lokale Sitzung und den ZITADEL-End-Session-Ablauf. */
+export async function logoutFromZitadel(auth: ZitadelAuthActions): Promise<void> {
+  await auth.logout();
+}
 
 /**
  * Hängt das Access-Token gemäß ADR 0004 Punkt 2 als
- * `Authorization: Bearer`-Header an einen Request gegen `apps/api` an —
- * identisches Muster wie in `apps/web`, da `apps/api` laut ADR 0004
- * bewusst client-typ-unabhängig denselben zustandslosen
- * Verifikationspfad für Web und Mobile nutzt.
+ * `Authorization: Bearer`-Header an einen Request gegen `apps/api` an --
+ * identisches Muster wie in `apps/web`, da `apps/api` bewusst
+ * client-typ-unabhängig denselben zustandslosen Verifikationspfad für
+ * Web und Mobile nutzt.
  */
 export function withAuthHeader(
   session: AuthenticationSession,
