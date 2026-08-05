@@ -308,10 +308,19 @@ Festlegung):**
     OIDC-Client-ID `384798128626288647`. Beides sind bei ZITADEL
     öffentliche, nicht-geheime Kennungen (Public Client mit PKCE, siehe
     Entscheidungspunkt 1 — kein Client-Secret nötig/vorhanden).
-  - Applikation für `apps/mobile` (Native-App) sowie Redirect-URIs,
-    Scopes/Claims-Konfiguration und die Organization-Provisionierung für
-    Lieferanten sind weiterhin nicht eingerichtet/dokumentiert — bleiben
-    laut ADR 0004 "Offene Annahmen" offen.
+  - Applikation "Native" (`apps/mobile`): OIDC-Client-ID
+    `384911280479225863` (Public Client mit PKCE, kein Client-Secret,
+    identisch im Charakter zur Web-Client-ID). Redirect-Mechanismus: ein
+    Custom-URI-Scheme (`supplierextranet://auth/callback`, siehe
+    `apps/mobile/app.json` `expo.scheme` und
+    `apps/mobile/src/auth/zitadel-config.ts`) statt einer HTTPS-Redirect-
+    URI wie bei Web. Diese Redirect-URI muss noch als erlaubte Redirect-
+    URI in der ZITADEL-Native-App-Konfiguration eingetragen werden
+    (externer Konfigurationsschritt, nicht durch Code lösbar) — bis dahin
+    schlägt der reale Login-Vorgang gegen ZITADEL fehl, auch wenn der
+    Code dafür bereitsteht. Scopes/Claims-Konfiguration und die
+    Organization-Provisionierung für Lieferanten bleiben weiterhin nicht
+    eingerichtet/dokumentiert (siehe "Offene Annahmen").
   - Diese Werte sind reine Konfiguration, keine ADR-Entscheidung, und
     gehören perspektivisch in eine Umgebungskonfiguration (z. B.
     `.env`/Secrets-Management), sobald ein Framework/Dependency-Setup
