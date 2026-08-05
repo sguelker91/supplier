@@ -18,6 +18,12 @@
       "package": "com.PLACEHOLDER.supplierextranet"
     },
     "web": {},
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c3c489bc-ef30-4e16-85af-00d0753d323d"
+    },
     "extra": {
       "eas": {
         "projectId": "c3c489bc-ef30-4e16-85af-00d0753d323d"
