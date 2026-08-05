@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Lieferanten-Extranet",
-    "slug": "supplier-extranet-mobile",
+    "slug": "supplier",
     "version": "0.1.0",
     "scheme": "supplierextranet",
     "orientation": "portrait",
