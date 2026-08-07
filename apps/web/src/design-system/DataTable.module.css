@@ -1,0 +1,35 @@
+.tableContainer {
+  /* AC2: horizontal scrollbarer Container statt Spalten-Ausblendung. */
+  overflow-x: auto;
+  width: 100%;
+}
+
+.table {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid rgba(107, 114, 128, 0.15);
+  white-space: nowrap;
+}
+
+.table th {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.checkboxCell {
+  width: 1%;
+}
+
+.status {
+  padding: var(--space-3);
+  color: var(--color-text-secondary);
+}

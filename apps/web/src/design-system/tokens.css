@@ -1,0 +1,39 @@
+/**
+ * Zentrale CSS-Custom-Property-Tokens für `apps/web` (ADR 0009 Abschnitt 1,
+ * "Kein externes UI-Kit -- internes Mini-Design-System für apps/web").
+ *
+ * Wird GLOBAL in `main.tsx` importiert (kein CSS Module -- Tokens müssen
+ * `:root`-weit gelten, damit alle Design-System-Komponenten sowie künftig
+ * migrierte Seiten (z. B. `ContractsListPage`, siehe ADR 0009
+ * "Konsequenzen") darauf zugreifen können).
+ *
+ * WICHTIG: Die konkreten Hex-Farbwerte sind laut ADR 0009 ("Offene
+ * Annahmen") aus der visuellen Analyse von `Design/APP.png` abgeleitete
+ * NÄHERUNGSWERTE, keine verifizierten Corporate-Design-Farbcodes -- 1:1 wie
+ * in der ADR angegeben übernommen, keine eigene Neuinterpretation.
+ */
+:root {
+  --color-background: #f2f3f5; /* Seitenhintergrund, helles Grau */
+  --color-surface: #ffffff; /* Card-Hintergrund */
+  --color-brand: #4f8a3d; /* Marken-/Ökolabel-Grün (Platzhalter, siehe Offene Annahmen) */
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-status-active: #2f7a3f;
+  --color-status-expired: #9ca3af;
+  --radius-card: 16px;
+  --radius-control: 10px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+}

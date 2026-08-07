@@ -1,0 +1,52 @@
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  flex-wrap: wrap;
+}
+
+.brand {
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-brand);
+}
+
+.navList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navLink {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-control);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.navLinkActive {
+  color: var(--color-brand);
+  background: rgba(79, 138, 61, 0.1);
+}
+
+.content {
+  flex: 1;
+  padding: var(--space-4);
+  box-sizing: border-box;
+  width: 100%;
+}
