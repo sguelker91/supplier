@@ -1,5 +1,5 @@
 ---
-description: Run the full PO -> Architect -> Developer -> QA -> Security -> DevOps -> Documentation pipeline for one feature request against the Lieferanten-Extranet, writing outputs to docs/ and a consolidated status report to docs/workflow/.
+description: Run the full PO -> UX/UI Architect -> Architect -> Developer -> QA -> Security -> DevOps -> Documentation pipeline for one feature request against the Lieferanten-Extranet, writing outputs to docs/ and a consolidated status report to docs/workflow/.
 argument-hint: <Feature-Beschreibung>
 disable-model-invocation: true
 ---
@@ -33,26 +33,36 @@ Rufe den `po`-Subagenten auf (Agent-Tool, subagent_type="po") mit der
 Feature-Beschreibung und dem Slug. Prüfe danach, dass
 `docs/backlog/<slug>.md` existiert; lies die Datei.
 
-## 2. Architect
+## 2. UX/UI Architect
+
+Rufe den `ux-ui-architect`-Subagenten auf. Gib ihm den Pfad zu
+`docs/backlog/<slug>.md` und den Slug mit, mit der Anweisung, diese Datei
+zuerst zu lesen. Prüfe, dass `docs/design/<slug>.md` existiert; lies sie.
+Dieser Agent schreibt keinen Anwendungscode — sein Output ist reine
+Design-Dokumentation als Grundlage für Architect/Developer.
+
+## 3. Architect
 
 Rufe den `architect`-Subagenten auf. Gib ihm den Pfad zu
-`docs/backlog/<slug>.md` und den Slug mit, mit der Anweisung, diese Datei
-zuerst zu lesen. Prüfe, dass mindestens eine neue Datei unter
-`docs/architecture/adr/` entstanden ist; lies sie.
+`docs/backlog/<slug>.md`, den Pfad zu `docs/design/<slug>.md` und den Slug
+mit, mit der Anweisung, beide Dateien zuerst zu lesen. Prüfe, dass
+mindestens eine neue Datei unter `docs/architecture/adr/` entstanden ist;
+lies sie.
 
-## 3. Developer
+## 4. Developer
 
 Rufe den `developer`-Subagenten auf. Gib ihm Slug, den Pfad zur
-Backlog-Datei und die Pfad(e) zur/den ADR(s) mit. Notiere dir aus seiner
-Antwort, welche Dateien/Code er geändert hat (für den Abschlussbericht).
+Backlog-Datei, den Pfad zum Design-Dokument und die Pfad(e) zur/den ADR(s)
+mit. Notiere dir aus seiner Antwort, welche Dateien/Code er geändert hat
+(für den Abschlussbericht).
 
-## 4. QA
+## 5. QA
 
 Rufe den `qa`-Subagenten auf. Gib ihm Slug, Backlog-Pfad, ADR-Pfad(e) und
 eine kurze Notiz mit, was der Developer geändert hat. Prüfe, dass
 `docs/qa/<slug>.md` existiert; lies sie und merke dir den Freigabe-Status.
 
-## 5. Security
+## 6. Security
 
 Rufe den `security`-Subagenten auf. Gib ihm Slug, Backlog-Pfad, ADR-Pfad(e)
 und den Pfad zum QA-Bericht mit. Der Security-Agent hat **kein Write-Tool**
@@ -60,19 +70,19 @@ und gibt seinen vollständigen Bericht als Antworttext zurück — **du**
 schreibst diesen Text unverändert nach `docs/security/<slug>.md` (Datei
 anlegen). Merke dir den Freigabe-Status/Schweregrad aus dem Text.
 
-## 6. DevOps
+## 7. DevOps
 
 Rufe den `devops`-Subagenten auf. Gib ihm Slug, ADR-Pfad(e) und den Pfad
 zum Security-Bericht mit (für Secrets-/Rollout-Implikationen). Prüfe, dass
 `docs/devops/<slug>.md` existiert; lies sie.
 
-## 7. Documentation
+## 8. Documentation
 
 Rufe den `documentation`-Subagenten auf. Gib ihm den Slug und die Pfade zu
 Backlog-, ADR-, QA-, Security- und DevOps-Dokumenten mit. Prüfe, dass
 `docs/product/<slug>.md` existiert; lies sie.
 
-## 8. Konsolidierter Statusbericht
+## 9. Konsolidierter Statusbericht
 
 Schreibe `docs/workflow/<slug>-status.md`:
 
@@ -85,12 +95,13 @@ Datum: <heutiges Datum>
 | Schritt | Rolle | Output-Datei | Status |
 |---|---|---|---|
 | 1 | Product Owner | docs/backlog/<slug>.md | OK/Fehler/Übersprungen |
-| 2 | Architect | docs/architecture/adr/... | OK/Fehler/Übersprungen |
-| 3 | Developer | (geänderte Dateien) | OK/Fehler/Übersprungen |
-| 4 | QA | docs/qa/<slug>.md | OK/Fehler/Übersprungen |
-| 5 | Security | docs/security/<slug>.md | OK/Fehler/Übersprungen |
-| 6 | DevOps | docs/devops/<slug>.md | OK/Fehler/Übersprungen |
-| 7 | Documentation | docs/product/<slug>.md | OK/Fehler/Übersprungen |
+| 2 | UX/UI Architect | docs/design/<slug>.md | OK/Fehler/Übersprungen |
+| 3 | Architect | docs/architecture/adr/... | OK/Fehler/Übersprungen |
+| 4 | Developer | (geänderte Dateien) | OK/Fehler/Übersprungen |
+| 5 | QA | docs/qa/<slug>.md | OK/Fehler/Übersprungen |
+| 6 | Security | docs/security/<slug>.md | OK/Fehler/Übersprungen |
+| 7 | DevOps | docs/devops/<slug>.md | OK/Fehler/Übersprungen |
+| 8 | Documentation | docs/product/<slug>.md | OK/Fehler/Übersprungen |
 
 ## Zusammenfassung
 (2-4 Sätze, rollenübergreifende Synthese)
@@ -103,7 +114,7 @@ falls vorhanden; sonst "Keine")
 - ...
 ```
 
-## 9. Abschluss im Chat
+## 10. Abschluss im Chat
 
 Gib eine kurze Zusammenfassung im Chat aus: Pfad zum Statusbericht plus ein
 Einzeiler-Fazit (z. B. "Pipeline abgeschlossen, aber QA hat 1 blockierenden

@@ -1,0 +1,29 @@
+.syncStatus {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.syncStatusStale {
+  font-weight: 600;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-control);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.statusBadgeActive {
+  background: rgba(47, 122, 63, 0.12);
+  color: var(--color-status-active);
+}
+
+.statusBadgeExpired {
+  background: rgba(156, 163, 175, 0.15);
+  color: var(--color-text-secondary);
+}

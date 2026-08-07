@@ -62,6 +62,7 @@ docs/       Fachliche & technische Dokumentation der Agenten
 | Rolle | Datei | Zuständigkeit | Output |
 |---|---|---|---|
 | Product Owner | `.claude/agents/po.md` | Feature-Anfragen in User Stories + Akzeptanzkriterien übersetzen | `docs/backlog/<slug>.md` |
+| UX/UI Architect | `.claude/agents/ux-ui-architect.md` | Informationsarchitektur, Navigation, Seitenlayout, Responsive Verhalten, Designsystem, Komponentenwahl, Accessibility, Konsistenz (kein Code) | `docs/design/<slug>.md` |
 | Architect | `.claude/agents/architect.md` | Technisches Design, ADRs, Systemgrenzen (inkl. Lobster/ERP) | `docs/architecture/adr/*.md` |
 | Developer | `.claude/agents/developer.md` | Implementierung gemäß ADR und Backlog-Story | `apps/*` |
 | QA | `.claude/agents/qa.md` | Testkonzept, Verifikation gegen Akzeptanzkriterien, DSGVO-Prüfpunkte | `docs/qa/<slug>.md` |
@@ -72,7 +73,7 @@ docs/       Fachliche & technische Dokumentation der Agenten
 
 ## Pipeline starten
 
-Für ein vollständiges Feature (PO → Architect → Developer → QA → Security →
+Für ein vollständiges Feature (PO → UX/UI Architect → Architect → Developer → QA → Security →
 DevOps → Documentation) den Slash-Command ausführen:
 
 ```

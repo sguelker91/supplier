@@ -4,6 +4,12 @@
  * bereitsteht, kann `.page` einfach ein zusätzliches `background-image`
  * (z. B. `url('/login-background.jpg')`, `background-size: cover`)
  * bekommen -- der Verlauf bleibt dann als Fallback/Ladezustand.
+ *
+ * Werte, die auf `tokens.css`-Design-Tokens umgestellt wurden bzw. bewusst
+ * NICHT umgestellt wurden, sind in `docs/design/web-app-konsistenz-review.md`
+ * dokumentiert (Abschnitt "Login-Seite"). Gradient, Glassmorphism-Effekt,
+ * Warmton-Akzentfarben und die abweichende Card-Schatten-/Padding-Kalibrierung
+ * bleiben bewusste, dort begründete Ausnahmen vom Design-System.
  */
 .page {
   min-height: 100vh;
@@ -11,7 +17,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--space-4);
   box-sizing: border-box;
   background:
     radial-gradient(circle at 86% 46%, rgba(255, 246, 219, 0.95) 0%, rgba(255, 205, 130, 0.55) 9%, rgba(255, 170, 90, 0) 30%),
@@ -26,12 +32,7 @@
       #1b230f 78%,
       #10150a 100%
     );
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  font-family: var(--font-family-base);
 }
 
 .card {
@@ -41,7 +42,7 @@
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   padding: 40px 32px;
   box-shadow: 0 24px 60px rgba(20, 20, 10, 0.35);
   text-align: center;
@@ -60,12 +61,12 @@
   margin: 0 0 16px;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #22281c;
+  color: var(--color-text-primary);
 }
 
 .description {
   margin: 0 0 28px;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -78,7 +79,7 @@
   color: #fff;
   background: linear-gradient(135deg, #e08a3c, #b85c1f);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   cursor: pointer;
   transition:
     transform 0.15s ease,
@@ -96,9 +97,9 @@
 }
 
 .error {
-  margin: 16px 0 0;
-  padding: 10px 14px;
-  border-radius: 8px;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
   background: rgba(220, 38, 38, 0.08);
   color: #b91c1c;
   font-size: 0.875rem;
