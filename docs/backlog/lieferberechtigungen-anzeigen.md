@@ -225,3 +225,152 @@ Rückfragen stellen zu müssen.
   (Synchronisationsintervall), und soll dem Lieferanten ein
   Datenstand-/Sync-Hinweis angezeigt werden (analog zur Kontrakte-Story,
   AC6 dort)?
+
+## Implementierungsnotizen
+
+Umsetzung gemäß
+[ADR 0009](../architecture/adr/0009-lieferberechtigungen-design-system-backend-dokumentenabstraktion.md),
+ausschließlich `apps/web` + `apps/api` (kein `apps/mobile`, wie gefordert).
+
+### Was wurde gebaut
+
+**Design-System (`apps/web/src/design-system/`)**
+- `tokens.css` (1:1 wie ADR 0009 Abschnitt 1, inkl. der dort explizit als
+  Näherungswerte markierten Hex-Farben), global in `main.tsx` importiert.
+- `Card.tsx`, `AppShell.tsx` (statische Navigationsliste, `NavLink` aus
+  `react-router-dom`), `DataTable.tsx` und `DateRangeFilter.tsx` — Interfaces
+  exakt wie in ADR 0009 Abschnitt 4/5 skizziert (`DataTableColumn<T>`,
+  `DataTableSelectionProps`, `DataTableProps<T>`, `DateRangeValue`,
+  `DateRangeFilterProps`). `DataTable` ist fully-controlled bzgl. Auswahl,
+  `DataTable` selbst hält keinen Auswahl-State; horizontal scrollbarer
+  Tabellen-Container (`overflow-x: auto`) statt Spalten-Ausblendung (AC2).
+  Jede Komponente hat einen `*.spec.tsx`-Test (RTL), analog `LoginPage.spec.tsx`.
+
+**Routing (`apps/web`)**
+- `react-router-dom` als reguläre npm-Dependency ergänzt
+  (`npm install react-router-dom --workspace=apps/web`, kein Netzwerkproblem
+  — der Registry-Host ist von der Proxy-Sandbox ausgenommen). Installierte
+  Version ist `^7.18.2` (React-Router v7). Die in ADR 0009 verwendeten APIs
+  (`BrowserRouter`, `Routes`/`Route`, `Navigate`, `NavLink`, `useNavigate`,
+  `useParams`, `useSearchParams`) existieren in v7 unverändert zu v6 — keine
+  fachliche Abweichung von der ADR-Skizze, nur eine neuere Paketversion.
+- `App.tsx` umgestellt: `AUTH_CALLBACK_PATH` ist jetzt eine reguläre Route
+  außerhalb von `ProtectedArea` (statt manuellem
+  `window.location.pathname`-Vergleich); `Portal`-Komponente kapselt
+  `ProtectedArea` + `AppShell` + die eigentlichen Routen
+  (`/`, `/contracts`, `/delivery-authorizations`,
+  `/delivery-authorizations/:id`, `/delivery-authorizations/open`), genau
+  wie in ADR 0009 Abschnitt 2 skizziert. Bestehende Tests (`App.spec.tsx`,
+  `ProtectedArea.spec.tsx`, `LoginPage.spec.tsx`, `LogoutButton.spec.tsx`,
+  `AuthCallbackPage.spec.tsx`) bleiben unverändert grün.
+
+**Backend `apps/api/src/delivery-authorizations/`**
+- Types, Repository-Interface + `InMemoryDeliveryAuthorizationRepository`
+  (vier synthetische Fixtures über zwei `supplierId`-Werte,
+  `supplier-synthetic-a`/`-b`), Service, Controller, Module — strukturell
+  identisch zum `contracts`-Modul-Muster. `GET /delivery-authorizations`
+  verlangt `from`/`to` (400 bei Fehlen/ungültigem ISO-8601-Datum/
+  `from > to`, siehe `date-range.util.ts`), filtert serverseitig nach der
+  `supplierId` aus dem verifizierten Auth-Kontext.
+  `GET /delivery-authorizations/:id` repliziert exakt das
+  404/403/200-Verhalten aus `contracts.controller.ts` (ADR 0002 Punkt 4).
+  E2E-Test (`test/delivery-authorizations.e2e-spec.ts`) deckt explizit den
+  Mandantentrennungsfall "Lieferant A kann Lieferberechtigung von
+  Lieferant B nicht lesen -> 403" sowie 400/404/401 ab.
+
+**Backend `apps/api/src/documents/`**
+- `DocumentSubjectType`/`DocumentSubjectReference`/`DocumentReference`/
+  `DocumentProvider` exakt wie ADR 0009 Abschnitt 8, `StubDocumentProvider`
+  (liefert immer `[]`, klar als Übergangslösung kommentiert), DI-Token
+  `DOCUMENT_PROVIDER`. `DocumentsController` führt die von der ADR
+  geforderte ZUSÄTZLICHE Ownership-Prüfung über
+  `DeliveryAuthorizationsService.getMyDeliveryAuthorizationById(...)` durch,
+  bevor er überhaupt an `DocumentProvider` delegiert.
+  `test/documents.e2e-spec.ts` deckt gezielt die in der ADR beschriebene
+  Lücke ab: `GET /documents?subjectType=delivery-authorization&subjectId=<fremde-id>`
+  liefert 403 (Kern-Assertion: `response.body` ist NICHT `[]`), statt dass
+  der Stub-Provider unterschiedslos `200 []` für jede `subjectId` liefert.
+
+**Frontend `apps/web/src/delivery-authorizations/`**
+- `DeliveryAuthorizationsListPage.tsx`: `DateRangeFilter` + `DataTable` +
+  `Card`, echter Datenabruf über `delivery-authorization-client.ts`
+  (Access-Token aus `useAuth()`, `fetch` gegen `GET /delivery-authorizations`).
+  Auswahl-State (`selectedIds`) lebt in der Seite; wird bei
+  Zeitraum-Änderung aktiv zurückgesetzt (AC5/AC9); "Alle markieren" bezieht
+  sich nur auf sichtbare Zeilen (AC8, über `DataTable`s Selection-Prop);
+  Sammel-Öffnen-Button ist ohne Auswahl deaktiviert (AC12); Lade-/Leer-/
+  Fehlerzustände über `DataTable`s `isLoading`/`emptyState`/`error` (AC15-17).
+- `DeliveryAuthorizationDetailPage.tsx`: lädt `GET /delivery-authorizations/:id`,
+  zeigt die vier Pflichtfelder, lädt zusätzlich (nicht-blockierend, Fehler
+  werden bewusst verschluckt) Dokumente über `GET /documents` nach (AC13).
+- `DeliveryAuthorizationsOpenPage.tsx` (`/delivery-authorizations/open?ids=a,b,c`):
+  rendert `DeliveryAuthorizationDetailPage` je ID **untereinander**
+  (gewählte Variante der in ADR 0009 offengelassenen Frage
+  "nacheinander vs. untereinander").
+- Navigation über `AppShell` zwischen "Kontrakte" und "Lieferberechtigungen"
+  (AC3), Öffnen-Aktionen navigieren clientseitig (kein Modal/Download,
+  ADR 0009 Abschnitt 7).
+- Tests: `DeliveryAuthorizationsListPage.spec.tsx` deckt AC4/AC5/AC8/AC9/
+  AC10/AC11/AC12/AC15-17 ab (Fetch-Funktion wird als Prop injiziert, kein
+  echter `fetch`-Mock nötig); `DeliveryAuthorizationDetailPage.spec.tsx` und
+  `DeliveryAuthorizationsOpenPage.spec.tsx` decken AC10/AC11/AC13 ab.
+
+### Abweichungen von der ADR und warum
+
+- **Sync-Metadaten sind ein reiner Platzhalter, kein `DeliveryAuthorizationSyncRun`.**
+  ADR 0009 nennt `DeliveryAuthorizationSyncRun` nur als "strukturell
+  identisch zu `ContractSyncRun`", skizziert ihn aber nicht — und
+  `ContractSyncRun`/eine echte Sync-Historie sind laut bestehender
+  Implementierungsnotiz zu `lieferant-kontrakte-einsehen` ebenfalls nicht
+  umgesetzt (nur ein TODO in `ContractsService`). Konsequent dazu liefert
+  `DeliveryAuthorizationsController` `lastSuccessfulSyncAt: null,
+  isStale: false` als hart codierten Platzhalter (mit TODO-Kommentar),
+  keine eigene ADR-Erfindung, sondern dieselbe bewusste Lücke wie bei
+  Kontrakten.
+- **`AuthenticatedSupplierContext` wird aus `contracts/contract.types.ts`
+  wiederverwendet**, nicht in `delivery-authorizations` neu definiert. Die
+  ADR äußert sich dazu nicht explizit; da der Typ im bestehenden Code
+  bereits die kanonische, modulübergreifend importierte Quelle ist (siehe
+  `auth-context.decorator.ts`, `zitadel-auth.guard.ts`), wäre eine zweite
+  Definition eine unnötige Duplikation ohne Mehrwert.
+- **`API_BASE_URL` ist ein hart codierter Platzhalter**
+  (`apps/web/src/api-client/api-config.ts`, `http://localhost:3000`),
+  analog zur bereits bestehenden, dokumentierten Lücke bei
+  `ZITADEL_ISSUER`/`ZITADEL_WEB_CLIENT_ID` (kein Env-/Secrets-Konzept für
+  `apps/web` entschieden). Für lokale Entwicklung funktional, aber nicht
+  Staging-/Produktions-tauglich — offener Punkt, keine ADR-Vorwegnahme.
+- **Standardzeitraum-Platzhalter**: `date-range-default.ts` verwendet
+  "heute bis heute + 30 Tage", klar als PLATZHALTER kommentiert (ADR 0009
+  Abschnitt 6/„Offene Annahmen“ verlangt ausdrücklich keine fachliche
+  Festlegung vor Product-Klärung).
+- **Infrastruktur-Fix in `css-module-mock.cjs`** (nicht Teil der ADR, aber
+  nötig, um `AppShell.spec.tsx` korrekt zu testen): Der bisherige
+  Jest-Mock für `*.module.css`-Importe gab für JEDEN String-Property-Zugriff
+  unterschiedslos den Property-Namen zurück — inklusive `__esModule`. Das
+  ließ TypeScripts `esModuleInterop`-Hilfsfunktion (`__importDefault`) den
+  Mock fälschlich als bereits transpiliertes ESM-Modul erkennen, wodurch
+  ein `import styles from './x.module.css'`-Default-Import den String
+  `"default"` statt des Mock-Proxys selbst erhielt. Bestehende Tests
+  (`LoginPage.spec.tsx` etc.) haben das nie bemerkt, weil sie nie auf
+  konkrete Klassennamen prüfen — `AppShell.spec.tsx` (`toHaveClass(...)`,
+  gefordert um die Aktiv-Kennzeichnung der Navigation zu verifizieren) hat
+  den Fehler aufgedeckt. Fix: `__esModule` liefert jetzt explizit
+  `undefined`. Kein Verhalten für bestehende Tests geändert (weiterhin alle
+  grün), nur der zuvor nie geprüfte Fall korrigiert.
+- **Detailansicht zeigt ausschließlich die vier Pflichtfelder** (Abrufnummer,
+  Lieferdatum, Uhrzeit, Sorte) — laut Backlog ("Offene Fragen") ist der
+  vollständige Feldkatalog für die Detailansicht ungeklärt; keine
+  spekulativen Zusatzfelder ergänzt.
+- **Kein Audit-Logging, keine Synchronisations-/Datenstand-Anzeige für
+  Lieferberechtigungen** umgesetzt — beides laut Backlog ausdrücklich offene
+  Fragen, nicht Teil dieser ADR/Story.
+
+### Test-/Typecheck-Status
+
+- `npm run typecheck --workspaces`: grün (api, web, mobile).
+- `npm test --workspaces`: grün (api: 42 Tests/6 Suiten inkl. der zwei neuen
+  E2E-Suiten; web: 53 Tests/14 Suiten inkl. aller neuen Design-System- und
+  Lieferberechtigungs-Tests; mobile: unverändert, nicht Teil dieser Story).
+- Ausschließlich synthetische Testdaten in allen neuen Fixtures/Tests
+  (`supplier-synthetic-a`/`-b`, `SYNTH-ABRUF-*`), keine echten
+  Lieferanten-/Finanzdaten.
