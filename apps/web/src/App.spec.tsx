@@ -25,13 +25,27 @@ describe('App', () => {
     useAuthMock.mockReset();
   });
 
-  it('zeigt für nicht angemeldete Nutzer die Anmeldeseite statt der Kontrakte (AC7)', () => {
+  // TEMPORÄR ÜBERSPRUNGEN (2026-08-07): `ProtectedArea` ist in `Portal()`
+  // (App.tsx) bewusst deaktiviert, solange der reale ZITADEL-Login im
+  // Deployment nicht zuverlässig funktioniert -- siehe Kommentar dort.
+  // Diesen Test wieder aktivieren (`.skip` entfernen), sobald
+  // `ProtectedArea` in `App.tsx` reaktiviert ist; die Assertions selbst
+  // bleiben unverändert korrekt für AC7.
+  it.skip('zeigt für nicht angemeldete Nutzer die Anmeldeseite statt der Kontrakte (AC7)', () => {
     useAuthMock.mockReturnValue({ isLoading: false, isAuthenticated: false, signinRedirect: jest.fn() });
 
     render(<App />);
 
     expect(screen.getByRole('heading', { name: 'Anmeldung' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Kontrakte' })).not.toBeInTheDocument();
+  });
+
+  it('zeigt Kontrakte auch ohne Anmeldung (Login-Zwang temporär deaktiviert, siehe App.tsx)', () => {
+    useAuthMock.mockReturnValue({ isLoading: false, isAuthenticated: false, signinRedirect: jest.fn() });
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Kontrakte' })).toBeInTheDocument();
   });
 
   it('zeigt für angemeldete Nutzer die Kontrakte inklusive einer Abmelden-Aktion (AC9)', () => {

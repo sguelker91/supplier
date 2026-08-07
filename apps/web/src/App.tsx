@@ -14,11 +14,11 @@
  * - `/delivery-authorizations/open` -> Sammel-Öffnen-Ansicht (Query `?ids=`).
  * - `/delivery-authorizations/:id`  -> Detailansicht.
  *
- * `ProtectedArea` schützt weiterhin alles außer dem Callback-Pfad (AC7 der
- * Story `lieferanten-anmeldung-gpa`): nicht angemeldete Nutzer sehen die
- * `LoginPage` statt der eigentlichen Portalseiten. `AppShell` (ADR 0009
- * Abschnitt 1) stellt die gemeinsame Navigationsstruktur zwischen
- * Kontrakten und Lieferberechtigungen bereit (AC3 der Story
+ * `ProtectedArea` (AC7 der Story `lieferanten-anmeldung-gpa`) ist im
+ * `Portal()` unten TEMPORÄR deaktiviert -- siehe Kommentar dort für Grund
+ * und Reaktivierungs-Anleitung. `AppShell` (ADR 0009 Abschnitt 1) stellt
+ * die gemeinsame Navigationsstruktur zwischen Kontrakten und
+ * Lieferberechtigungen bereit (AC3 der Story
  * `lieferberechtigungen-anzeigen`).
  *
  * `ContractsListPage` erhält weiterhin offensichtlich synthetische
@@ -63,21 +63,33 @@ const NAVIGATION_ITEMS: AppShellNavigationItem[] = [
   { label: 'Lieferberechtigungen', to: '/delivery-authorizations' },
 ];
 
-/** Geschützter Portalbereich: Navigation (AC3) + die eigentlichen Seiten. */
+/**
+ * Geschützter Portalbereich: Navigation (AC3) + die eigentlichen Seiten.
+ *
+ * TEMPORÄR (2026-08-07): Der `<ProtectedArea>`-Login-Zwang ist hier bewusst
+ * entfernt, weil der reale ZITADEL-Login im aktuellen Deployment noch nicht
+ * zuverlässig funktioniert (offene Punkte: Redirect-URI/Umgebungs-
+ * konfiguration) und das Portal (Kontrakte, Lieferberechtigungen) in der
+ * Zwischenzeit ohne Anmeldung nutzbar sein soll. Der gesamte Login-Code
+ * (`ProtectedArea`, `LoginPage`, `AuthCallbackPage`, `LogoutButton`,
+ * `zitadel-config.ts`) ist unverändert vorhanden.
+ *
+ * REAKTIVIEREN: `<AppShell>...</AppShell>` unten wieder in
+ * `<ProtectedArea>...</ProtectedArea>` einwickeln (siehe Git-Historie
+ * dieser Datei für die vorherige Fassung), sobald der Login funktioniert.
+ */
 function Portal() {
   return (
-    <ProtectedArea>
-      <AppShell navigationItems={NAVIGATION_ITEMS}>
-        <LogoutButton />
-        <Routes>
-          <Route path="/" element={<Navigate to="/contracts" replace />} />
-          <Route path="/contracts" element={<ContractsListPage data={DEMO_DATA} />} />
-          <Route path="/delivery-authorizations" element={<DeliveryAuthorizationsListPage />} />
-          <Route path="/delivery-authorizations/open" element={<DeliveryAuthorizationsOpenPage />} />
-          <Route path="/delivery-authorizations/:id" element={<DeliveryAuthorizationDetailPage />} />
-        </Routes>
-      </AppShell>
-    </ProtectedArea>
+    <AppShell navigationItems={NAVIGATION_ITEMS}>
+      <LogoutButton />
+      <Routes>
+        <Route path="/" element={<Navigate to="/contracts" replace />} />
+        <Route path="/contracts" element={<ContractsListPage data={DEMO_DATA} />} />
+        <Route path="/delivery-authorizations" element={<DeliveryAuthorizationsListPage />} />
+        <Route path="/delivery-authorizations/open" element={<DeliveryAuthorizationsOpenPage />} />
+        <Route path="/delivery-authorizations/:id" element={<DeliveryAuthorizationDetailPage />} />
+      </Routes>
+    </AppShell>
   );
 }
 
