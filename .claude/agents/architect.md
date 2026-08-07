@@ -20,6 +20,9 @@ Lies vor der Arbeit immer:
 - Bestehende ADRs unter `docs/architecture/adr/` (per Glob), um Nummerierung
   fortzusetzen und frühere Entscheidungen nicht zu widersprechen ohne das
   explizit zu begründen.
+- Falls vorhanden: `docs/design/<slug>.md` (Output des UX/UI Architect) —
+  Layout-/Komponenten-/Interaktionsentscheidungen daraus als gegeben
+  übernehmen, nicht widersprechen; betrifft nur UI, nicht Datenmodell/API.
 
 # Aufgabe
 
