@@ -117,6 +117,24 @@ bleibt der Abgleich zwischen der GPA-basierten `supplierId` und der
 bisherigen ERP-Kennung (`supplierExternalId`) an der Lobster-Kontrakt-Grenze
 aus ADR 0001.
 
+Ausgelöst durch die Story "Lieferberechtigungen anzeigen" (`apps/web`-only)
+legt [ADR 0009](adr/0009-lieferberechtigungen-design-system-backend-dokumentenabstraktion.md)
+das erste geteilte Frontend-Baustein-Set für `apps/web` fest:
+CSS-Custom-Property-Design-Tokens plus generische Komponenten (`Card`,
+`DataTable`, `DateRangeFilter`, `AppShell`) statt einer externen
+UI-Bibliothek, sowie erstmals **`react-router-dom`** als clientseitiges
+Routing für `apps/web` (bislang nur manueller Pfadabgleich für den
+OIDC-Callback). Backend-seitig entsteht eine neue
+`delivery-authorizations`-Domäne in `apps/api`, die dem Muster aus ADR
+0001/ADR 0002 folgt (eigener Datenkontrakt inkl. Sync-Status,
+Guard-/Repository-Mandantentrennung über die GPA) — mit der bewussten
+Abweichung, dass das eingehende Lobster-Feld hier direkt `supplierGpa`
+statt `supplierExternalId` heißt, da diese Domäne erst nach ADR 0008
+modelliert wird. Zusätzlich entsteht ein separates `documents`-Modul mit
+einem austauschbaren `DocumentProvider`-Interface als Platzhalter für die
+künftige D3-Cloud-Anbindung. `apps/mobile` ist von ADR 0009 ausdrücklich
+nicht betroffen.
+
 ## Bekannte Systemgrenzen
 
 - **ERP-System**: führendes System für Stammdaten, Kontrakte, Belege.
@@ -158,6 +176,15 @@ aus ADR 0001.
   Datenresidenz-/AVV-Voraussetzungen vor Produktivbetrieb wie ZITADEL
   Cloud (siehe ADR 0008, Datenklassifizierung). Das konkrete
   Föderationsprotokoll (OIDC vs. SAML) zu Okta ist offen.
+- **D3 Cloud**: künftige externe Dokumenten-API für Belege zu
+  Lieferberechtigungen (und potenziell weiteren Objekten).
+  [ADR 0009](adr/0009-lieferberechtigungen-design-system-backend-dokumentenabstraktion.md)
+  definiert dafür in `apps/api` ausschließlich die Abstraktionsgrenze
+  (`DocumentProvider`-Interface, eigenes `documents`-Modul, aktuell eine
+  Stub-Implementierung ohne reale Anbindung, die stets eine leere
+  Dokumentenliste liefert). Die tatsächliche D3-Cloud-API (Authentifizierung,
+  Datenformat, Fehlerverhalten) ist unbekannt und nicht Gegenstand dieser
+  ADR.
 
 ## Zukünftige Anforderungen (noch nicht im Scope)
 
@@ -223,4 +250,8 @@ aus ADR 0001.
   entschieden; eine Differenzierung dieses Zugriffs nach Nutzertyp ist
   weiterhin **nicht** entschieden (siehe "Zukünftige Anforderungen").
 - Konkreter Transportmechanismus Lobster → `apps/api` für den
-  Kontrakt-Ingestion-Adapter (siehe ADR 0001, offene Annahme).
+  Kontrakt-Ingestion-Adapter (siehe ADR 0001, offene Annahme). Für
+  Lieferberechtigungen gilt analog derselbe offene Punkt (siehe
+  ADR 0009, Offene Annahmen), zusätzlich mit der unverifizierten Annahme,
+  ob Lobster/SAP dafür bereits direkt die GPA (`supplierGpa`) statt einer
+  gesonderten ERP-Kennung liefert.
