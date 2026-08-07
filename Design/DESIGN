@@ -1,0 +1,55 @@
+# DESIGN.md
+
+## Zweck
+
+Dieses Dokument beschreibt die Designgrundsätze und die visuellen Referenzen für dieses Projekt.
+
+## Designquelle
+
+Die Datei `APP.png` stellt die **maßgebliche Designvision** für die neue Anwendung dar.
+
+Das Layout, die Navigation, die Farbgebung, die Komponenten und die allgemeine Benutzerführung sollen sich an dieser Designvorlage orientieren.
+
+## Referenzmaterial des Altsystems
+
+Der Ordner `screenshots/` enthält Screenshots des bisherigen Lieferantenportals.
+
+**Diese Screenshots dienen ausschließlich dazu, die fachlichen Funktionen und Geschäftsprozesse des bestehenden Systems zu verstehen.**
+
+Sie sind **keine Designvorlage**.
+
+Insbesondere sollen folgende Elemente **nicht** übernommen werden:
+
+* Layout
+* Farben
+* Navigation
+* Schriftarten
+* Icons
+* Abstände
+* Komponenten
+* Responsive Verhalten
+
+Der Agent soll ausschließlich analysieren:
+
+* Welche Funktionen existieren?
+* Welche Informationen werden angezeigt?
+* Welche Eingaben kann der Benutzer machen?
+* Welche Geschäftsprozesse lassen sich daraus ableiten?
+
+## Ziel
+
+Es soll **kein Redesign des alten Portals** entstehen.
+
+Es soll eine **moderne, übersichtliche und responsive Anwendung** entwickelt werden, welche die fachlichen Funktionen des bisherigen Systems übernimmt, jedoch das neue Design aus `APP.png` verwendet.
+
+## Vorgehensweise
+
+Bei jedem neuen Feature gilt folgende Reihenfolge:
+
+1. Alte Screenshots analysieren, um die fachliche Funktion zu verstehen.
+2. Die Funktion in die neue Informationsarchitektur übertragen.
+3. Das UI gemäß `APP.png` entwerfen.
+4. Moderne UI-Komponenten verwenden.
+5. Konsistenz mit bereits implementierten Ansichten sicherstellen.
+
+Im Zweifel haben die Vorgaben aus `APP.png` immer Vorrang vor dem Erscheinungsbild des bisherigen Systems.
