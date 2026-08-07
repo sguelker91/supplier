@@ -67,9 +67,8 @@ describe('ContractsListPage', () => {
       />,
     );
 
-    const row = screen.getByText('SYNTH-TEST-EXPIRED').closest('tr');
-    expect(row).toHaveAttribute('data-status', 'expired');
     expect(screen.getByText('abgelaufen')).toBeInTheDocument();
+    expect(screen.queryByText('aktiv')).not.toBeInTheDocument();
   });
 
   it('zeigt einen Veraltet-Hinweis, wenn isStale gesetzt ist (AC6)', () => {
