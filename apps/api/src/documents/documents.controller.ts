@@ -69,23 +69,47 @@ export class DocumentsController {
 
     // Zweite, zusätzliche Ownership-Prüfung (siehe Klassenkommentar) --
     // NICHT durch eine reine Delegation an `documentProvider` ersetzbar.
-    const ownership = await this.deliveryAuthorizations.getMyDeliveryAuthorizationById(
-      subjectId,
-      auth,
-    );
-
-    switch (ownership.kind) {
-      case 'not_found':
-        throw new NotFoundException();
-      case 'forbidden':
-        throw new ForbiddenException();
-      case 'ok':
-        break;
-    }
+    // Exhaustiveness-Check (Security-Bericht `lieferberechtigungen-anzeigen.md`,
+    // "mittel"-Befund): der `never`-Fallback im `default`-Zweig lässt den
+    // Compiler fehlschlagen, sobald `DocumentSubjectType` um einen neuen Wert
+    // erweitert wird, ohne dass hier ein passender Ownership-Check ergänzt
+    // wurde -- verhindert, dass ein künftiger `subjectType` versehentlich
+    // ohne Mandantentrennungsprüfung an `documentProvider` durchgereicht wird.
+    await this.assertOwnership(subjectType as DocumentSubjectType, subjectId, auth);
 
     return this.documentProvider.listDocuments({
       subjectType: subjectType as DocumentSubjectType,
       subjectId,
     });
+  }
+
+  private async assertOwnership(
+    subjectType: DocumentSubjectType,
+    subjectId: string,
+    auth: AuthenticatedSupplierContext,
+  ): Promise<void> {
+    switch (subjectType) {
+      case 'delivery-authorization': {
+        const ownership = await this.deliveryAuthorizations.getMyDeliveryAuthorizationById(
+          subjectId,
+          auth,
+        );
+        switch (ownership.kind) {
+          case 'not_found':
+            throw new NotFoundException();
+          case 'forbidden':
+            throw new ForbiddenException();
+          case 'ok':
+            return;
+        }
+        break;
+      }
+      default: {
+        // Zwingt bei Erweiterung von `DocumentSubjectType` einen Compile-Fehler,
+        // bis dieser Zweig um den passenden Ownership-Check ergänzt wird.
+        const exhaustiveCheck: never = subjectType;
+        throw new Error(`Kein Ownership-Check für subjectType definiert: ${exhaustiveCheck}`);
+      }
+    }
   }
 }
