@@ -1,7 +1,9 @@
 /**
  * Listenansicht der Lieferberechtigungen (AC1-AC12, AC15-AC17), zeigt, wie
- * `apps/web` `Card`/`DateRangeFilter`/`DataTable` (ADR 0009 Abschnitt 1/4/5)
- * für die neue Domäne einsetzt.
+ * `apps/web` `DateRangeFilter`/`DataTable` (ADR 0009 Abschnitt 1/4/5) für
+ * die neue Domäne einsetzt. Seit der "Modern Minimal"-Überarbeitung ohne
+ * den `Card`-Rahmen (reines Re-Skin, siehe `ContractsListPage.tsx` für
+ * dasselbe Muster) -- Auswahl-/Lade-/Fehler-Logik unverändert.
  *
  * Architektur-Entscheidungen (ADR 0009):
  * - Auswahl-State lebt in dieser Seite, NICHT in `DataTable` (Abschnitt 4).
@@ -15,7 +17,6 @@ import { useAuth } from 'react-oidc-context';
 import { useNavigate } from 'react-router-dom';
 
 import type { DeliveryAuthorization, DeliveryAuthorizationListResponse } from '../../../api/src/delivery-authorizations/delivery-authorization.types';
-import { Card } from '../design-system/Card';
 import type { DataTableColumn } from '../design-system/DataTable';
 import { DataTable } from '../design-system/DataTable';
 import type { DateRangeValue } from '../design-system/DateRangeFilter';
@@ -113,7 +114,10 @@ export function DeliveryAuthorizationsListPage(props: DeliveryAuthorizationsList
   }
 
   return (
-    <Card title="Lieferberechtigungen">
+    <div>
+      <h1 className={styles.heading}>Lieferberechtigungen</h1>
+      <p className={styles.description}>Abrufe im gewählten Lieferzeitraum.</p>
+
       <div className={styles.filterRow}>
         <DateRangeFilter
           value={dateRange}
@@ -148,6 +152,6 @@ export function DeliveryAuthorizationsListPage(props: DeliveryAuthorizationsList
           </button>
         )}
       />
-    </Card>
+    </div>
   );
 }

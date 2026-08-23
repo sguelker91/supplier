@@ -4,22 +4,31 @@
  *
  * Wird GLOBAL in `main.tsx` importiert (kein CSS Module -- Tokens müssen
  * `:root`-weit gelten, damit alle Design-System-Komponenten sowie künftig
- * migrierte Seiten (z. B. `ContractsListPage`, siehe ADR 0009
- * "Konsequenzen") darauf zugreifen können).
+ * migrierte Seiten darauf zugreifen können).
  *
- * WICHTIG: Die konkreten Hex-Farbwerte sind laut ADR 0009 ("Offene
- * Annahmen") aus der visuellen Analyse von `Design/APP.png` abgeleitete
- * NÄHERUNGSWERTE, keine verifizierten Corporate-Design-Farbcodes -- 1:1 wie
- * in der ADR angegeben übernommen, keine eigene Neuinterpretation.
+ * Seit der "Modern Minimal"-Überarbeitung (docs/design/web-app-konsistenz-
+ * review.md-Nachfolger: die veröffentlichten Design-Canvases "Extranet
+ * Modern Minimal"/"Extranet Mobile Modern") oklch-basierte Palette statt
+ * der ursprünglich aus `Design/APP.png` abgeleiteten Hex-Näherungswerte
+ * (ADR 0009 "Offene Annahmen"). Namen wie `--color-surface`/
+ * `--color-text-primary` bleiben bewusst bestehen (viele Komponenten
+ * referenzieren sie), nur die Werte und die neu hinzugekommenen Tokens
+ * sind neu.
  */
 :root {
-  --color-background: #f2f3f5; /* Seitenhintergrund, helles Grau */
-  --color-surface: #ffffff; /* Card-Hintergrund */
-  --color-brand: #4f8a3d; /* Marken-/Ökolabel-Grün (Platzhalter, siehe Offene Annahmen) */
-  --color-text-primary: #1f2937;
-  --color-text-secondary: #6b7280;
-  --color-status-active: #2f7a3f;
-  --color-status-expired: #9ca3af;
+  --bg: oklch(98% 0.006 95);
+  --color-surface: oklch(100% 0 0);
+  --accent: #1c7a4d;
+  --color-text-primary: oklch(22% 0.02 250);
+  --color-text-secondary: oklch(52% 0.014 250);
+  --text-muted: oklch(65% 0.01 250);
+  --border: oklch(91% 0.006 95);
+  --row-hover: oklch(96.5% 0.006 95);
+  --sidebar-bg: oklch(21% 0.03 155);
+  --sidebar-hover: oklch(27% 0.03 155);
+  --ink-inverse: oklch(97% 0.01 120);
+  --ink-inverse-muted: oklch(68% 0.03 145);
+  --panel-line: oklch(34% 0.03 155);
   --radius-card: 16px;
   --radius-control: 10px;
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05);
@@ -28,12 +37,12 @@
   --space-3: 16px;
   --space-4: 24px;
   --space-5: 32px;
-  --font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-family-base: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 body {
   margin: 0;
-  background: var(--color-background);
+  background: var(--bg);
   color: var(--color-text-primary);
   font-family: var(--font-family-base);
 }

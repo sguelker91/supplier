@@ -38,6 +38,7 @@ import { AUTH_CALLBACK_PATH, createZitadelAuthProviderProps } from './auth/zitad
 import { ContractsListPage } from './contracts/ContractsListPage';
 import type { AppShellNavigationItem } from './design-system/AppShell';
 import { AppShell } from './design-system/AppShell';
+import { DocumentIcon, TruckIcon } from './design-system/icons';
 import { DeliveryAuthorizationDetailPage } from './delivery-authorizations/DeliveryAuthorizationDetailPage';
 import { DeliveryAuthorizationsListPage } from './delivery-authorizations/DeliveryAuthorizationsListPage';
 import { DeliveryAuthorizationsOpenPage } from './delivery-authorizations/DeliveryAuthorizationsOpenPage';
@@ -59,8 +60,8 @@ const DEMO_DATA = {
 };
 
 const NAVIGATION_ITEMS: AppShellNavigationItem[] = [
-  { label: 'Kontrakte', to: '/contracts' },
-  { label: 'Lieferberechtigungen', to: '/delivery-authorizations' },
+  { label: 'Kontrakte', to: '/contracts', icon: <DocumentIcon /> },
+  { label: 'Lieferberechtigungen', to: '/delivery-authorizations', icon: <TruckIcon /> },
 ];
 
 /**

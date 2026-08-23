@@ -1,29 +1,49 @@
-.syncStatus {
-  margin: 0 0 var(--space-3);
+.heading {
+  margin: 0 0 var(--space-1);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--color-text-primary);
+}
+
+.description {
+  margin: 0 0 var(--space-4);
+  font-size: 0.9rem;
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+}
+
+.syncStatus {
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .syncStatusStale {
   font-weight: 600;
 }
 
-.statusBadge {
+.statusCell {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-control);
-  font-size: 0.8rem;
-  font-weight: 600;
+  gap: var(--space-2);
 }
 
-.statusBadgeActive {
-  background: rgba(47, 122, 63, 0.12);
-  color: var(--color-status-active);
+.statusDotActive,
+.statusDotExpired {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.statusBadgeExpired {
-  background: rgba(156, 163, 175, 0.15);
-  color: var(--color-text-secondary);
+.statusDotActive {
+  background: var(--accent);
+}
+
+.statusDotExpired {
+  background: var(--text-muted);
+}
+
+.statusTextExpired {
+  color: var(--text-muted);
 }
