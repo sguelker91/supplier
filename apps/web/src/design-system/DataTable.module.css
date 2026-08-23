@@ -13,16 +13,21 @@
 .table th,
 .table td {
   text-align: left;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid rgba(107, 114, 128, 0.15);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 .table th {
-  color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
+}
+
+.table tbody tr:hover td {
+  background: var(--row-hover);
 }
 
 .checkboxCell {
@@ -31,5 +36,5 @@
 
 .status {
   padding: var(--space-3);
-  color: var(--color-text-secondary);
+  color: var(--text-muted);
 }

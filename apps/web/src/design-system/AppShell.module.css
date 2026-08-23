@@ -1,52 +1,75 @@
 .shell {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  background: var(--color-background);
+  background: var(--bg);
 }
 
-.nav {
+.sidebar {
+  width: 248px;
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  padding: var(--space-4) var(--space-3);
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
-  flex-wrap: wrap;
+  flex-direction: column;
 }
 
 .brand {
-  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-inverse);
   font-weight: 700;
-  color: var(--color-brand);
+  padding: 0 var(--space-2);
+  margin-bottom: var(--space-5);
 }
 
 .navList {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .navLink {
-  display: inline-block;
-  padding: var(--space-1) var(--space-2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
   border-radius: var(--radius-control);
-  color: var(--color-text-secondary);
+  color: var(--ink-inverse-muted);
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.navLink:hover {
+  background: var(--sidebar-hover);
+  color: var(--ink-inverse);
 }
 
 .navLinkActive {
-  color: var(--color-brand);
-  background: rgba(79, 138, 61, 0.1);
+  color: var(--ink-inverse);
+  font-weight: 700;
+  background: var(--sidebar-hover);
+}
+
+.navLinkActive::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 2px;
 }
 
 .content {
   flex: 1;
-  padding: var(--space-4);
+  padding: 48px 56px;
   box-sizing: border-box;
-  width: 100%;
+  min-width: 0;
 }

@@ -4,8 +4,11 @@
  * rendert. Jetzt eine echte, renderbare React-Komponente (React + Vite,
  * siehe `vite.config.ts`), seit der Konsistenz-Review
  * (`docs/design/web-app-konsistenz-review.md`) auf dem seit ADR 0009
- * bestehenden Design-System (`Card`/`DataTable`) statt einer rohen
- * `<table>`.
+ * bestehenden Design-System (`DataTable`) statt einer rohen `<table>`.
+ * Seit der "Modern Minimal"-Überarbeitung (Design-Canvas "Extranet Modern
+ * Minimal") ohne den `Card`-Rahmen -- die Sidebar/Content-Aufteilung in
+ * `AppShell` übernimmt die visuelle Abgrenzung, die Seite rendert Titel
+ * und Tabelle direkt auf dem Content-Hintergrund.
  *
  * Bewusst weiterhin nicht Teil dieser Komponente (siehe Implementierungs-
  * notizen in docs/backlog/lieferant-kontrakte-einsehen.md):
@@ -22,7 +25,6 @@
  * Story: docs/backlog/lieferant-kontrakte-einsehen.md
  */
 import type { ContractListItem, ContractListResponse } from '../../../api/src/contracts/contract.types';
-import { Card } from '../design-system/Card';
 import type { DataTableColumn } from '../design-system/DataTable';
 import { DataTable } from '../design-system/DataTable';
 import styles from './ContractsListPage.module.css';
@@ -49,7 +51,10 @@ export function ContractsListPage(props: { data: ContractListResponse }) {
   const { contracts, lastSuccessfulSyncAt, isStale } = props.data;
 
   return (
-    <Card title="Kontrakte">
+    <div>
+      <h1 className={styles.heading}>Kontrakte</h1>
+      <p className={styles.description}>Ihre laufenden und abgelaufenen Liefervereinbarungen im Überblick.</p>
+
       {/* AC6: Hinweis auf Datenstand, insbesondere wenn veraltet. */}
       <p role="status" className={styles.syncStatus}>
         {lastSuccessfulSyncAt
@@ -65,7 +70,7 @@ export function ContractsListPage(props: { data: ContractListResponse }) {
         getRowId={(row) => row.id}
         emptyState="Keine Kontrakte vorhanden."
       />
-    </Card>
+    </div>
   );
 }
 
@@ -73,10 +78,14 @@ function ContractStatusBadge(props: { status: ContractListItem['status'] }) {
   const isExpired = props.status === 'expired';
 
   // AC8: abgelaufene Kontrakte müssen eindeutig erkennbar sein -- Text bleibt
-  // immer sichtbar (nicht nur farbkodiert), siehe Konsistenz-Review.
+  // immer sichtbar (nicht nur farbkodiert; der Punkt allein wäre reine
+  // Farbkodierung), siehe Konsistenz-Review.
   return (
-    <span className={`${styles.statusBadge} ${isExpired ? styles.statusBadgeExpired : styles.statusBadgeActive}`}>
-      {isExpired ? 'abgelaufen' : 'aktiv'}
+    <span className={styles.statusCell}>
+      <span className={isExpired ? styles.statusDotExpired : styles.statusDotActive} />
+      <span className={isExpired ? styles.statusTextExpired : undefined}>
+        {isExpired ? 'abgelaufen' : 'aktiv'}
+      </span>
     </span>
   );
 }

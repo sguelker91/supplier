@@ -12,14 +12,18 @@
 }
 
 .label {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .input {
   padding: var(--space-2);
-  border: 1px solid rgba(107, 114, 128, 0.35);
-  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   font-family: var(--font-family-base);
   font-size: 0.9rem;
+  color: var(--color-text-primary);
 }
