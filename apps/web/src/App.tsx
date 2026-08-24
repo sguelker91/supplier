@@ -43,6 +43,13 @@ import { DeliveryAuthorizationDetailPage } from './delivery-authorizations/Deliv
 import { DeliveryAuthorizationsListPage } from './delivery-authorizations/DeliveryAuthorizationsListPage';
 import { DeliveryAuthorizationsOpenPage } from './delivery-authorizations/DeliveryAuthorizationsOpenPage';
 
+// Relativ zu "heute" berechnet, damit die Demo-Daten nicht mit der Zeit
+// sichtbar veralten -- analog zu getDefaultDeliveryAuthorizationDateRange()
+// in delivery-authorizations/date-range-default.ts.
+const today = new Date();
+const currentYear = today.getFullYear();
+const todayIso = today.toISOString().slice(0, 10);
+
 const DEMO_DATA = {
   contracts: [
     {
@@ -50,12 +57,12 @@ const DEMO_DATA = {
       contractNumber: 'DEMO-KONTRAKT-1',
       articleOrProductGroup: 'Demo-Warengruppe',
       agreedQuantity: { value: 100, unit: 'kg' },
-      validFrom: '2026-01-01',
-      validTo: '2026-12-31',
+      validFrom: `${currentYear}-01-01`,
+      validTo: `${currentYear}-12-31`,
       status: 'active' as const,
     },
   ],
-  lastSuccessfulSyncAt: '2026-08-04T08:00:00Z',
+  lastSuccessfulSyncAt: `${todayIso}T08:00:00Z`,
   isStale: false,
 };
 

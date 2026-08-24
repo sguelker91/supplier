@@ -5,8 +5,10 @@
  *
  * Bewusste Vereinfachungen ggü. dem Web-Pendant für diese erste Mobile-
  * Fassung:
- * - Zeitraum-Chip ist rein informativ/statisch (kein Datepicker-Paket
- *   vorhanden, kein echter Datepicker Teil dieser Aufgabe).
+ * - Zeitraum-Chip ist rein informativ/nicht interaktiv (kein Datepicker-
+ *   Paket vorhanden, kein echter Datepicker Teil dieser Aufgabe); der
+ *   angezeigte Bereich wird aber relativ zu "heute" berechnet, damit er
+ *   nicht mit der Zeit veraltet.
  * - Keine Mehrfachauswahl/Bulk-Öffnen -- Zeilen sind einzeln antippbar.
  * - `onPress` ist ein No-Op (kein Mobile-Detail-Screen im Scope dieser
  *   Design-Überarbeitung).
@@ -19,12 +21,32 @@ import type { DeliveryAuthorization } from '../../../api/src/delivery-authorizat
 import { DocumentIcon } from '../design-system/icons';
 import { colors, fontFamily, spacing } from '../design-system/theme';
 
+// Relativ zu "heute" berechnet, damit die Demo-Daten nicht mit der Zeit
+// sichtbar veralten -- analog zu getDefaultDeliveryAuthorizationDateRange()
+// in apps/web/src/delivery-authorizations/date-range-default.ts.
+const today = new Date();
+const todayIso = today.toISOString().slice(0, 10);
+
+const FILTER_RANGE_DAYS = 6;
+
+function formatDayMonth(date: Date): string {
+  return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+}
+
+function formatDayMonthYear(date: Date): string {
+  return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+const filterRangeEnd = new Date(today);
+filterRangeEnd.setDate(filterRangeEnd.getDate() + FILTER_RANGE_DAYS);
+const FILTER_RANGE_LABEL = `${formatDayMonth(today)}. – ${formatDayMonthYear(filterRangeEnd)}`;
+
 const DEMO_ITEMS: DeliveryAuthorization[] = [
   {
     id: 'demo-da-1',
     supplierId: 'demo-supplier',
     callOffNumber: 'AB-100482',
-    deliveryDate: '2026-08-24',
+    deliveryDate: todayIso,
     deliveryTime: '07:30',
     variety: 'Winterweizen A',
   },
@@ -32,7 +54,7 @@ const DEMO_ITEMS: DeliveryAuthorization[] = [
     id: 'demo-da-2',
     supplierId: 'demo-supplier',
     callOffNumber: 'AB-100491',
-    deliveryDate: '2026-08-24',
+    deliveryDate: todayIso,
     deliveryTime: '11:00',
     variety: 'Braugerste',
   },
@@ -47,7 +69,7 @@ export function DeliveryAuthorizationsScreen() {
 
         {/* Rein informativ -- kein Datepicker in dieser ersten Mobile-Fassung. */}
         <View style={styles.filterChip}>
-          <Text style={styles.filterChipText}>18.08. – 24.08.2026</Text>
+          <Text style={styles.filterChipText}>{FILTER_RANGE_LABEL}</Text>
         </View>
       </View>
 
