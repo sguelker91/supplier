@@ -11,7 +11,6 @@ COPY apps/mobile/package.json apps/mobile/package.json
 RUN npm ci
 
 COPY apps/api apps/api
-COPY tsconfig*.json ./
 
 RUN npm run build --workspace=apps/api
 
