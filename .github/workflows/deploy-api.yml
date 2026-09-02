@@ -1,0 +1,37 @@
+name: Deploy API to AKS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/deploy-api.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push image
+        run: |
+          az acr build --registry supplierregistry \
+            --image supplier-api:${{ github.sha }} \
+            --image supplier-api:latest .
+
+      - name: Deploy to AKS
+        run: |
+          az aks get-credentials --resource-group supplier --name supplier-cluster
+          kubectl apply -f apps/api/k8s/deployment.yaml
+          kubectl set image deployment/supplier-api supplier-api=supplierregistry.azurecr.io/supplier-api:${{ github.sha }}
