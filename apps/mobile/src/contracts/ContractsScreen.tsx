@@ -12,6 +12,13 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { ContractListItem } from '../../../api/src/contracts/contract.types';
 import { colors, fontFamily, spacing } from '../design-system/theme';
 
+// Relativ zu "heute" berechnet, damit die Demo-Daten nicht mit der Zeit
+// sichtbar veralten -- analog zu getDefaultDeliveryAuthorizationDateRange()
+// in apps/web/src/delivery-authorizations/date-range-default.ts.
+const today = new Date();
+const currentYear = today.getFullYear();
+const todayIso = today.toISOString().slice(0, 10);
+
 const DEMO_DATA: { contracts: ContractListItem[]; lastSuccessfulSyncAt: string } = {
   contracts: [
     {
@@ -19,8 +26,8 @@ const DEMO_DATA: { contracts: ContractListItem[]; lastSuccessfulSyncAt: string }
       contractNumber: 'DEMO-KONTRAKT-1',
       articleOrProductGroup: 'Demo-Warengruppe',
       agreedQuantity: { value: 100, unit: 'kg' },
-      validFrom: '2026-01-01',
-      validTo: '2026-12-31',
+      validFrom: `${currentYear}-01-01`,
+      validTo: `${currentYear}-12-31`,
       status: 'active',
     },
     {
@@ -28,12 +35,12 @@ const DEMO_DATA: { contracts: ContractListItem[]; lastSuccessfulSyncAt: string }
       contractNumber: 'DEMO-KONTRAKT-2',
       articleOrProductGroup: 'Demo-Warengruppe B',
       agreedQuantity: { value: 40, unit: 't' },
-      validFrom: '2024-01-01',
-      validTo: '2024-12-31',
+      validFrom: `${currentYear - 1}-01-01`,
+      validTo: `${currentYear - 1}-12-31`,
       status: 'expired',
     },
   ],
-  lastSuccessfulSyncAt: '2026-08-04T08:00:00Z',
+  lastSuccessfulSyncAt: `${todayIso}T08:00:00Z`,
 };
 
 export function ContractsScreen() {

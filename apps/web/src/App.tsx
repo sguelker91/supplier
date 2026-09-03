@@ -14,12 +14,13 @@
  * - `/delivery-authorizations/open` -> Sammel-Öffnen-Ansicht (Query `?ids=`).
  * - `/delivery-authorizations/:id`  -> Detailansicht.
  *
- * `ProtectedArea` (AC7 der Story `lieferanten-anmeldung-gpa`) ist im
- * `Portal()` unten TEMPORÄR deaktiviert -- siehe Kommentar dort für Grund
- * und Reaktivierungs-Anleitung. `AppShell` (ADR 0009 Abschnitt 1) stellt
- * die gemeinsame Navigationsstruktur zwischen Kontrakten und
- * Lieferberechtigungen bereit (AC3 der Story
- * `lieferberechtigungen-anzeigen`).
+ * `ProtectedArea` (AC7 der Story `lieferanten-anmeldung-gpa`) gated seit
+ * 2026-09-03 wieder den Zugriff auf `Portal()` -- siehe Kommentar dort zur
+ * Historie (war vom 2026-08-07 bis 2026-09-03 temporär deaktiviert) und zum
+ * Vorgehen, falls der reale Login erneut deaktiviert werden muss.
+ * `AppShell` (ADR 0009 Abschnitt 1) stellt die gemeinsame
+ * Navigationsstruktur zwischen Kontrakten und Lieferberechtigungen bereit
+ * (AC3 der Story `lieferberechtigungen-anzeigen`).
  *
  * `ContractsListPage` erhält weiterhin offensichtlich synthetische
  * Demo-Daten statt echter Daten aus `apps/api` -- unverändert gegenüber
@@ -43,6 +44,13 @@ import { DeliveryAuthorizationDetailPage } from './delivery-authorizations/Deliv
 import { DeliveryAuthorizationsListPage } from './delivery-authorizations/DeliveryAuthorizationsListPage';
 import { DeliveryAuthorizationsOpenPage } from './delivery-authorizations/DeliveryAuthorizationsOpenPage';
 
+// Relativ zu "heute" berechnet, damit die Demo-Daten nicht mit der Zeit
+// sichtbar veralten -- analog zu getDefaultDeliveryAuthorizationDateRange()
+// in delivery-authorizations/date-range-default.ts.
+const today = new Date();
+const currentYear = today.getFullYear();
+const todayIso = today.toISOString().slice(0, 10);
+
 const DEMO_DATA = {
   contracts: [
     {
@@ -50,12 +58,12 @@ const DEMO_DATA = {
       contractNumber: 'DEMO-KONTRAKT-1',
       articleOrProductGroup: 'Demo-Warengruppe',
       agreedQuantity: { value: 100, unit: 'kg' },
-      validFrom: '2026-01-01',
-      validTo: '2026-12-31',
+      validFrom: `${currentYear}-01-01`,
+      validTo: `${currentYear}-12-31`,
       status: 'active' as const,
     },
   ],
-  lastSuccessfulSyncAt: '2026-08-04T08:00:00Z',
+  lastSuccessfulSyncAt: `${todayIso}T08:00:00Z`,
   isStale: false,
 };
 
@@ -67,30 +75,33 @@ const NAVIGATION_ITEMS: AppShellNavigationItem[] = [
 /**
  * Geschützter Portalbereich: Navigation (AC3) + die eigentlichen Seiten.
  *
- * TEMPORÄR (2026-08-07): Der `<ProtectedArea>`-Login-Zwang ist hier bewusst
- * entfernt, weil der reale ZITADEL-Login im aktuellen Deployment noch nicht
- * zuverlässig funktioniert (offene Punkte: Redirect-URI/Umgebungs-
- * konfiguration) und das Portal (Kontrakte, Lieferberechtigungen) in der
- * Zwischenzeit ohne Anmeldung nutzbar sein soll. Der gesamte Login-Code
- * (`ProtectedArea`, `LoginPage`, `AuthCallbackPage`, `LogoutButton`,
- * `zitadel-config.ts`) ist unverändert vorhanden.
+ * Der `<ProtectedArea>`-Login-Zwang war vom 2026-08-07 bis 2026-09-03
+ * bewusst entfernt, weil der reale ZITADEL-Login im damaligen Deployment
+ * nicht zuverlässig funktionierte (offene Punkte: Redirect-URI/Umgebungs-
+ * konfiguration in der ZITADEL-Konsole). Seit 2026-09-03 wieder aktiv --
+ * ob das zugrunde liegende Konfigurationsproblem tatsächlich behoben ist,
+ * wird erst durch einen echten Login-Versuch auf dem Deployment sichtbar.
  *
- * REAKTIVIEREN: `<AppShell>...</AppShell>` unten wieder in
- * `<ProtectedArea>...</ProtectedArea>` einwickeln (siehe Git-Historie
- * dieser Datei für die vorherige Fassung), sobald der Login funktioniert.
+ * ERNEUT DEAKTIVIEREN (falls der Login weiterhin nicht zuverlässig
+ * funktioniert): `<ProtectedArea>...</ProtectedArea>` unten wieder
+ * entfernen und `<AppShell>...</AppShell>` direkt zurückgeben -- genauso
+ * simpel wie beim ersten Mal, kein Feature-Flag/keine Umgebungsvariable
+ * nötig.
  */
 function Portal() {
   return (
-    <AppShell navigationItems={NAVIGATION_ITEMS}>
-      <LogoutButton />
-      <Routes>
-        <Route path="/" element={<Navigate to="/contracts" replace />} />
-        <Route path="/contracts" element={<ContractsListPage data={DEMO_DATA} />} />
-        <Route path="/delivery-authorizations" element={<DeliveryAuthorizationsListPage />} />
-        <Route path="/delivery-authorizations/open" element={<DeliveryAuthorizationsOpenPage />} />
-        <Route path="/delivery-authorizations/:id" element={<DeliveryAuthorizationDetailPage />} />
-      </Routes>
-    </AppShell>
+    <ProtectedArea>
+      <AppShell navigationItems={NAVIGATION_ITEMS}>
+        <LogoutButton />
+        <Routes>
+          <Route path="/" element={<Navigate to="/contracts" replace />} />
+          <Route path="/contracts" element={<ContractsListPage data={DEMO_DATA} />} />
+          <Route path="/delivery-authorizations" element={<DeliveryAuthorizationsListPage />} />
+          <Route path="/delivery-authorizations/open" element={<DeliveryAuthorizationsOpenPage />} />
+          <Route path="/delivery-authorizations/:id" element={<DeliveryAuthorizationDetailPage />} />
+        </Routes>
+      </AppShell>
+    </ProtectedArea>
   );
 }
 
