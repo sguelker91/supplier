@@ -1,0 +1,32 @@
+# ---- Build-Stage ----
+FROM node:20-alpine AS builder
+WORKDIR /repo
+
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY apps/mobile/package.json apps/mobile/package.json
+
+RUN npm ci
+
+COPY apps/web apps/web
+
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
+RUN npm run build --workspace=apps/web
+
+# ---- Runtime-Stage: nginx liefert die statischen Dateien aus ----
+FROM nginx:alpine
+COPY --from=builder /repo/apps/web/dist /usr/share/nginx/html
+
+# Wichtig für React-Router (Single Page App): alle Pfade auf index.html umleiten
+RUN echo 'server { \
+    listen 80; \
+    location / { \
+        root /usr/share/nginx/html; \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
