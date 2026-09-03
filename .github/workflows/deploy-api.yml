@@ -1,12 +1,12 @@
-name: Deploy API to AKS
+name: Deploy Web to AKS
 
 on:
   push:
     branches: [main]
     paths:
-      - 'apps/api/**'
-      - '.github/workflows/deploy-api.yml'
-      - 'Dockerfile'
+      - 'apps/web/**'
+      - 'Dockerfile.web'
+      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
 permissions:
@@ -29,11 +29,13 @@ jobs:
       - name: Build and push image
         run: |
           az acr build --registry supplierregistry \
-            --image supplier-api:${{ github.sha }} \
-            --image supplier-api:latest .
+            --image supplier-web:${{ github.sha }} \
+            --image supplier-web:latest \
+            --file Dockerfile.web \
+            --build-arg VITE_API_URL=http://9.141.123.99 .
 
       - name: Deploy to AKS
         run: |
           az aks get-credentials --resource-group supplier --name supplier-cluster
-          kubectl apply -f apps/api/k8s/deployment.yaml
-          kubectl set image deployment/supplier-api supplier-api=supplierregistry.azurecr.io/supplier-api:${{ github.sha }}
+          kubectl apply -f apps/web/k8s/deployment.yaml
+          kubectl set image deployment/supplier-web supplier-web=supplierregistry.azurecr.io/supplier-web:${{ github.sha }}
