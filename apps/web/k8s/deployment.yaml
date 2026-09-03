@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: supplier-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: supplier-web
+  template:
+    metadata:
+      labels:
+        app: supplier-web
+    spec:
+      containers:
+        - name: supplier-web
+          image: supplierregistry.azurecr.io/supplier-web:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: supplier-web
+spec:
+  type: LoadBalancer
+  selector:
+    app: supplier-web
+  ports:
+    - port: 80
+      targetPort: 80
