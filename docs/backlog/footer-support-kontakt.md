@@ -132,3 +132,43 @@ Objekten.
 - Soll der Footer bei sehr langen Seiteninhalten am Ende des Inhalts
   ("im Fluss") oder als sticky/fixierter Bereich am unteren Bildschirmrand
   dargestellt werden? Layout-Entscheidung für den UX/UI-Architect-Agenten.
+
+## Implementierungsnotizen
+
+Umgesetzt gemäß `docs/architecture/adr/0010-footer-support-kontakt.md` und
+`docs/design/footer-support-kontakt.md`, ohne Abweichungen:
+
+- **Neu**: `apps/web/src/design-system/Footer.tsx` — zustandslose
+  Präsentationskomponente ohne Pflicht-Props; Label-Text
+  (`Support-Kontakt:`) und Adresse (`support@myemsland.de`) als Konstanten
+  im Modul. Natives `<footer>`-Element (ARIA-Landmark `contentinfo`), Label
+  als `<span>`, Adresse als `<a href="mailto:support@myemsland.de">`, deren
+  sichtbarer Linktext exakt die Adresse ist (Accessible Name = Zweck, kein
+  `aria-label` nötig, kein `outline`/`text-decoration` überschrieben — der
+  native Fokusring/die Standard-Unterstreichung bleiben erhalten).
+- **Neu**: `apps/web/src/design-system/Footer.module.css` — ausschließlich
+  bestehende Tokens (`--bg`, `--border`, `--color-text-secondary`,
+  `--accent`, `--space-2/3/4`) plus die bereits an anderer Stelle
+  (`AppShell.module.css` `.navLink`) verwendete Schriftgröße `0.85rem`;
+  volle Breite ohne `max-width`, `border-top`, kein Radius/Schatten, `flex`
+  mit `flex-wrap: wrap` für Responsivität (AC6).
+- **Neu**: `apps/web/src/design-system/Footer.spec.tsx` — zwei Tests
+  (React Testing Library, analog `Card.spec.tsx`): verifiziert, dass ein
+  Link mit Accessible Name `support@myemsland.de` und `href="mailto:
+  support@myemsland.de"` gerendert wird (AC9), sowie dass der Footer als
+  `contentinfo`-Landmark mit Label-Text erscheint.
+- **Geändert**: `apps/web/src/App.tsx` — `Footer` importiert und als
+  zweites Kind von `<BrowserRouter>`, nach der äußeren `<Routes>` und
+  außerhalb von `Portal()`/`AppShell` eingehängt, exakt wie im Code-Beispiel
+  der ADR. Dadurch genau eine Footer-Instanz für die gesamte App, sichtbar
+  unabhängig vom `ProtectedArea`-Zustand (eingeloggtes Portal via
+  `AppShell` oder `LoginPage`) sowie auf `AuthCallbackPage` (AC1, AC2, AC8).
+  `Portal()` und `ProtectedArea.tsx` unverändert.
+- Verifikation: `npm run typecheck --workspace=apps/web`,
+  `npm test --workspace=apps/web` (55/55 Tests grün, inkl. der zwei neuen
+  Footer-Tests) und `npm run build --workspace=apps/web` liefen alle
+  erfolgreich, keine bestehenden Tests wurden verändert oder sind
+  gebrochen.
+- Keine neue npm-Abhängigkeit hinzugefügt (AC5); `package.json`/
+  `package-lock.json` von `apps/web` unverändert.
+- Abweichungen von ADR/Design-Dokument: keine.
