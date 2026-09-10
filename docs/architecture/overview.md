@@ -135,6 +135,18 @@ einem austauschbaren `DocumentProvider`-Interface als Platzhalter für die
 künftige D3-Cloud-Anbindung. `apps/mobile` ist von ADR 0009 ausdrücklich
 nicht betroffen.
 
+Ausgelöst durch die Story "Footer mit Support-Kontakt" (`apps/web`-only,
+rein statische UI-Ergänzung ohne Bezug zu Lieferberechtigung, Kontrakt,
+Abnahmeschein, Beleg oder Mengenmeldung) legt [ADR 0010](adr/0010-footer-support-kontakt.md)
+fest, dass der neue Design-System-Baustein `Footer` **nicht** innerhalb von
+`AppShell`, sondern in `apps/web/src/App.tsx` als Geschwister-Element der
+äußeren `<Routes>` innerhalb von `<BrowserRouter>` eingehängt wird — als
+einzige Stelle, die den Footer sowohl im eingeloggten Portal (`AppShell`)
+als auch auf `LoginPage` (via `ProtectedArea`) und `AuthCallbackPage`
+automatisch erscheinen lässt, ohne Duplizierung oder neue Bibliothek/neue
+Design-Tokens. Betroffen ist ausschließlich `apps/web`-Frontend-Struktur;
+kein Datenmodell-, API- oder Lobster/ERP-Bezug.
+
 ## Bekannte Systemgrenzen
 
 - **ERP-System**: führendes System für Stammdaten, Kontrakte, Belege.

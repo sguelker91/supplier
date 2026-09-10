@@ -39,6 +39,7 @@ import { AUTH_CALLBACK_PATH, createZitadelAuthProviderProps } from './auth/zitad
 import { ContractsListPage } from './contracts/ContractsListPage';
 import type { AppShellNavigationItem } from './design-system/AppShell';
 import { AppShell } from './design-system/AppShell';
+import { Footer } from './design-system/Footer';
 import { DocumentIcon, TruckIcon } from './design-system/icons';
 import { DeliveryAuthorizationDetailPage } from './delivery-authorizations/DeliveryAuthorizationDetailPage';
 import { DeliveryAuthorizationsListPage } from './delivery-authorizations/DeliveryAuthorizationsListPage';
@@ -115,6 +116,10 @@ export function App() {
           <Route path={AUTH_CALLBACK_PATH} element={<AuthCallbackPage />} />
           <Route path="/*" element={<Portal />} />
         </Routes>
+        {/* Footer auf App-Root-Ebene (ADR 0010): Geschwister-Element der
+            äußeren <Routes>, damit er unabhängig vom Login-Status auf jeder
+            Seite erscheint (AppShell-Portal, LoginPage, AuthCallbackPage). */}
+        <Footer />
       </BrowserRouter>
     </AuthProvider>
   );

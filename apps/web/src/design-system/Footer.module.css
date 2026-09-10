@@ -1,0 +1,21 @@
+.footer {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.label {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.link {
+  color: var(--accent);
+  font-size: 0.85rem;
+}
