@@ -12,12 +12,12 @@ Verbindliche Fachterminologie: siehe [`docs/domain-glossar.md`](docs/domain-glos
 
 ## Stand des Projekts
 
-Neben der Fachlogik betreibt dieses Repository ein Team aus 8 spezialisierten
+Neben der Fachlogik betreibt dieses Repository ein Team aus 9 spezialisierten
 Claude-Code-Subagenten, das die weitere Entwicklung strukturiert durchführt
-(Product Owner, Architect, Developer, QA, Security, DevOps, Documentation,
-Orchestrator). Seit dem Monorepo-Bootstrap ist das Repository ein echtes,
-installierbares npm-Projekt mit lauffähigen (wenn auch noch frühen)
-Grundgerüsten für alle drei Apps — kein reiner Konturwurf mehr:
+(Product Owner, UX/UI Architect, Architect, Developer, QA, Security, DevOps,
+Documentation, Orchestrator). Seit dem Monorepo-Bootstrap ist das Repository
+ein echtes, installierbares npm-Projekt mit lauffähigen (wenn auch noch
+frühen) Grundgerüsten für alle drei Apps — kein reiner Konturwurf mehr:
 
 ```
 npm install
@@ -25,9 +25,11 @@ npm run typecheck --workspaces
 npm test --workspaces
 ```
 
-Ein erster End-to-End-Testlauf der Agenten-Pipeline liegt ebenfalls vor
-(Slug `lieferant-kontrakte-einsehen`, siehe [`docs/workflow/`](docs/workflow/))
-und zeigt exemplarisch, wie die Rollen zusammenarbeiten.
+Mehrere vollständige End-to-End-Testläufe der Agenten-Pipeline liegen bereits
+vor (siehe [`docs/workflow/`](docs/workflow/)), u. a. `lieferanten-anmeldung-gpa`,
+`lieferberechtigungen-anzeigen`, `lieferant-kontrakte-einsehen` und
+`footer-support-kontakt` — sie zeigen exemplarisch, wie die Rollen
+zusammenarbeiten.
 
 ## Tech-Stack
 
@@ -58,6 +60,7 @@ Feindetails bleiben offen — siehe
 | Rolle | Definition | Zuständigkeit | Output |
 |---|---|---|---|
 | Product Owner | [`.claude/agents/po.md`](.claude/agents/po.md) | Feature-Anfragen → User Stories + Akzeptanzkriterien | `docs/backlog/<slug>.md` |
+| UX/UI Architect | [`.claude/agents/ux-ui-architect.md`](.claude/agents/ux-ui-architect.md) | Informationsarchitektur, Layout, Design-System-Nutzung, Accessibility (kein Code) | `docs/design/<slug>.md` |
 | Architect | [`.claude/agents/architect.md`](.claude/agents/architect.md) | Technisches Design, ADRs, Systemgrenzen (inkl. Lobster/ERP) | `docs/architecture/adr/*.md` |
 | Developer | [`.claude/agents/developer.md`](.claude/agents/developer.md) | Implementierung gemäß ADR und Backlog-Story | `apps/*` |
 | QA | [`.claude/agents/qa.md`](.claude/agents/qa.md) | Testkonzept, Verifikation, DSGVO-Prüfpunkte | `docs/qa/<slug>.md` |
@@ -68,8 +71,8 @@ Feindetails bleiben offen — siehe
 
 ## Pipeline starten
 
-Für ein vollständiges Feature (PO → Architect → Developer → QA → Security →
-DevOps → Documentation) den Slash-Command ausführen:
+Für ein vollständiges Feature (PO → UX/UI Architect → Architect → Developer →
+QA → Security → DevOps → Documentation) den Slash-Command ausführen:
 
 ```
 /orchestrate <Feature-Beschreibung>
@@ -92,6 +95,7 @@ apps/
 docs/
   domain-glossar.md       Verbindliche Fachterminologie
   backlog/                PO-Ergebnisse (User Stories)
+  design/                 UX/UI-Architect-Ergebnisse (Layout, Design-System-Nutzung)
   architecture/adr/       Architect-Entscheidungen (ADRs)
   qa/                     QA-Berichte
   security/               Security-Berichte
@@ -99,7 +103,7 @@ docs/
   product/                Endnutzer-/Entwickler-Dokumentation
   workflow/               Konsolidierte Pipeline-Statusberichte
 .claude/
-  agents/                 Subagenten-Definitionen (8 Rollen)
+  agents/                 Subagenten-Definitionen (9 Rollen)
   commands/               orchestrate.md (Pipeline-Slash-Command)
 ```
 
